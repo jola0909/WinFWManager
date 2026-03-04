@@ -25,6 +25,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrafficMonitorViewModel>();
         services.AddSingleton<LogViewerViewModel>();
+        services.AddSingleton<RulesManagerViewModel>();
+        services.AddSingleton<NetworkInterfacesViewModel>();
+        services.AddSingleton<DashboardViewModel>();
 
         return services;
     }

@@ -55,16 +55,13 @@
                 <views:LogViewerView/>
             </TabItem>
             <TabItem Header="Rules Manager">
-                <TextBlock Text="Rules Manager" Foreground="{DynamicResource SecondaryTextBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <views:RulesManagerView/>
             </TabItem>
             <TabItem Header="Network Interfaces">
-                <TextBlock Text="Network Interfaces" Foreground="{DynamicResource SecondaryTextBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <views:NetworkInterfacesView/>
             </TabItem>
             <TabItem Header="Dashboard">
-                <TextBlock Text="Dashboard" Foreground="{DynamicResource SecondaryTextBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <views:DashboardView/>
             </TabItem>
         </TabControl>
 
