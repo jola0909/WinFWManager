@@ -24,4 +24,7 @@
 
     <!-- Border -->
     <SolidColorBrush x:Key="BorderBrush" Color="#404060"/>
+
+    <!-- Converters -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
 </ResourceDictionary>

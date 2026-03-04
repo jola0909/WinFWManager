@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using WinFWManager.Core.Services;
+using WinFWManager.ViewModels;
 
 namespace WinFWManager;
 
@@ -8,6 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddWinFWManagerServices(this IServiceCollection services)
     {
+        // Core services
         services.AddSingleton<IProcessResolver>(new ProcessResolver());
         services.AddSingleton<IGeoIpResolver>(sp =>
         {
@@ -18,6 +20,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFirewallLogParser, FirewallLogParser>();
         services.AddSingleton<IFirewallRuleService, FirewallRuleService>();
         services.AddSingleton<IEtwTrafficMonitor, EtwTrafficMonitor>();
+
+        // ViewModels
+        services.AddSingleton<MainViewModel>();
+        services.AddSingleton<TrafficMonitorViewModel>();
+        services.AddSingleton<LogViewerViewModel>();
+
         return services;
     }
 }
