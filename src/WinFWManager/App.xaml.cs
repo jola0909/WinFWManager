@@ -11,11 +11,27 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var services = new ServiceCollection();
-        services.AddWinFWManagerServices();
-        Services = services.BuildServiceProvider();
+        DispatcherUnhandledException += (_, args) =>
+        {
+            MessageBox.Show(args.Exception.ToString(), "Unhandled Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            args.Handled = true;
+        };
 
-        var mainWindow = new MainWindow();
-        mainWindow.Show();
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddWinFWManagerServices();
+            Services = services.BuildServiceProvider();
+
+            var mainWindow = new MainWindow();
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.ToString(), "Startup Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1);
+        }
     }
 }

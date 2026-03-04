@@ -9,7 +9,7 @@ public class PowerShellRunspacePool : IDisposable
 
     public PowerShellRunspacePool(int minRunspaces = 1, int maxRunspaces = 5)
     {
-        var iss = InitialSessionState.CreateDefault();
+        var iss = InitialSessionState.CreateDefault2();
         iss.ImportPSModule(new[] { "NetSecurity" });
         _pool = RunspaceFactory.CreateRunspacePool(iss);
         _pool.SetMinRunspaces(minRunspaces);
