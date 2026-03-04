@@ -109,12 +109,38 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
         return true;
     }
 
+    [ObservableProperty] private TrafficEvent? _selectedEvent;
+
     [RelayCommand]
     private void ClearEvents()
     {
         Events.Clear();
         _eventBuffer.Clear();
         EventCount = 0;
+    }
+
+    [RelayCommand]
+    private void CreateRuleFromTraffic()
+    {
+        if (SelectedEvent == null) return;
+
+        var evt = SelectedEvent;
+        var rule = new FirewallRuleInfo
+        {
+            DisplayName = $"Block {evt.DestinationAddress}:{evt.DestinationPort}",
+            Name = $"WinFW_Block_{evt.DestinationAddress}_{evt.DestinationPort}_{DateTime.Now.Ticks}",
+            Direction = evt.Direction,
+            Action = TrafficAction.Block,
+            Protocol = evt.Protocol,
+            RemoteAddress = evt.DestinationAddress?.ToString(),
+            RemotePort = evt.DestinationPort > 0 ? evt.DestinationPort.ToString() : null,
+            Profile = evt.Profile,
+            Enabled = true,
+            IsHyperVRule = evt.IsHyperVTraffic
+        };
+
+        var dialog = new Views.RuleEditorDialog(rule);
+        dialog.ShowDialog();
     }
 
     public void Dispose()

@@ -29,6 +29,7 @@
 
         <!-- Traffic DataGrid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding EventsView}"
+                  SelectedItem="{Binding SelectedEvent}"
                   AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserSortColumns="True"
                   VirtualizingPanel.IsVirtualizing="True"
@@ -41,6 +42,14 @@
                   BorderThickness="0"
                   HeadersVisibility="Column"
                   x:Name="TrafficGrid">
+
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Create Rule from Traffic..."
+                              Command="{Binding DataContext.CreateRuleFromTrafficCommand,
+                                        RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
 
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
