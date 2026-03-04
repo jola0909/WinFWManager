@@ -1,12 +1,79 @@
-﻿<Window x:Class="WinFWManager.MainWindow"
+<Window x:Class="WinFWManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:WinFWManager"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        xmlns:converters="clr-namespace:WinFWManager.Converters"
+        Title="WinFW Manager" Height="800" Width="1400"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource PrimaryBgBrush}">
 
+    <Window.Resources>
+        <converters:BoolToStringConverter x:Key="MonitoringButtonConverter"
+                                          TrueValue="Stop Monitoring" FalseValue="Start Monitoring"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="28"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource SecondaryBgBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <DockPanel Margin="12,0">
+                <TextBlock Text="WinFW Manager" FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+
+                <!-- Admin indicator -->
+                <Border DockPanel.Dock="Right" CornerRadius="4" Padding="8,4" Margin="8,0"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}"
+                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                </Border>
+
+                <!-- Start/Stop button -->
+                <Button DockPanel.Dock="Right"
+                        Content="{Binding IsMonitoring, Converter={StaticResource MonitoringButtonConverter}}"
+                        Command="{Binding ToggleMonitoringCommand}"
+                        Margin="8,0" Padding="16,6" VerticalAlignment="Center"/>
+
+                <StackPanel/>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Content: Tab Control -->
+        <TabControl Grid.Row="1" Background="Transparent"
+                    SelectedIndex="{Binding SelectedTabIndex}"
+                    Foreground="{DynamicResource PrimaryTextBrush}">
+            <TabItem Header="Traffic Monitor">
+                <TextBlock Text="Traffic Monitor — coming next" Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </TabItem>
+            <TabItem Header="Log Viewer">
+                <TextBlock Text="Log Viewer" Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </TabItem>
+            <TabItem Header="Rules Manager">
+                <TextBlock Text="Rules Manager" Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </TabItem>
+            <TabItem Header="Network Interfaces">
+                <TextBlock Text="Network Interfaces" Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </TabItem>
+            <TabItem Header="Dashboard">
+                <TextBlock Text="Dashboard" Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource SecondaryBgBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource SecondaryTextBrush}"
+                       Margin="12,0" VerticalAlignment="Center" FontSize="11"/>
+        </Border>
     </Grid>
 </Window>
