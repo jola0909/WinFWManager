@@ -1,4 +1,5 @@
 using Microsoft.Management.Infrastructure;
+using Microsoft.Management.Infrastructure.Options;
 using WinFWManager.Core.Models;
 
 namespace WinFWManager.Core.Services;
@@ -14,7 +15,9 @@ public sealed class CimFirewallQueryService : IDisposable
 
     public CimFirewallQueryService()
     {
-        _session = CimSession.Create("localhost");
+        // Use DCOM protocol for local WMI access (doesn't require WinRM)
+        var options = new DComSessionOptions();
+        _session = CimSession.Create("localhost", options);
     }
 
     public async Task<IReadOnlyList<FirewallRuleInfo>> GetRulesAsync(FirewallStore store)
