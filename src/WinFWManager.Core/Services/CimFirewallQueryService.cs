@@ -20,9 +20,9 @@ public sealed class CimFirewallQueryService : IDisposable
     public async Task<IReadOnlyList<FirewallRuleInfo>> GetRulesAsync(FirewallStore store)
     {
         var rulesTask = Task.Run(() => QueryRules());
-        var portsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Protocol, LocalPort, RemotePort FROM MSFT_NetFirewallPortFilter"));
-        var addrsTask = Task.Run(() => QueryInstances("SELECT InstanceID, LocalAddress, RemoteAddress FROM MSFT_NetFirewallAddressFilter"));
-        var appsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Program FROM MSFT_NetFirewallApplicationFilter"));
+        var portsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Protocol, LocalPort, RemotePort FROM MSFT_NetProtocolPortFilter"));
+        var addrsTask = Task.Run(() => QueryInstances("SELECT InstanceID, LocalAddress, RemoteAddress FROM MSFT_NetAddressFilter"));
+        var appsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Program FROM MSFT_NetApplicationFilter"));
 
         await Task.WhenAll(rulesTask, portsTask, addrsTask, appsTask);
 
