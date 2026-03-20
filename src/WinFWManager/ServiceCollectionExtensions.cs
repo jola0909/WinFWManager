@@ -13,8 +13,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProcessResolver>(new ProcessResolver());
         services.AddSingleton<IGeoIpResolver>(sp =>
         {
-            var mmdbPath = Path.Combine(AppContext.BaseDirectory, "GeoLite2-City.mmdb");
-            return new GeoIpResolver(File.Exists(mmdbPath) ? mmdbPath : null);
+            try
+            {
+                var mmdbPath = Path.Combine(AppContext.BaseDirectory, "GeoLite2-City.mmdb");
+                return new GeoIpResolver(File.Exists(mmdbPath) ? mmdbPath : null);
+            }
+            catch
+            {
+                // MaxMind DLL may be blocked by Application Control policy
+                return new NullGeoIpResolver();
+            }
         });
         services.AddSingleton<INetworkInterfaceService, NetworkInterfaceService>();
         services.AddSingleton<IFirewallLogParser, FirewallLogParser>();

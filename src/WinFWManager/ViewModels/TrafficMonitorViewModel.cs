@@ -16,9 +16,11 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     private readonly IEtwTrafficMonitor _etwMonitor;
     private readonly IProcessResolver _processResolver;
     private readonly IGeoIpResolver _geoIpResolver;
+    private readonly INetworkInterfaceService _nicService;
     private readonly RingBuffer<TrafficEvent> _eventBuffer = new(50_000);
     private IDisposable? _subscription;
     private readonly Dispatcher _dispatcher;
+    private bool _nicCacheLoaded;
 
     public ObservableCollection<TrafficEvent> Events { get; } = new();
     public ICollectionView EventsView { get; }
@@ -34,11 +36,13 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     public TrafficMonitorViewModel(
         IEtwTrafficMonitor etwMonitor,
         IProcessResolver processResolver,
-        IGeoIpResolver geoIpResolver)
+        IGeoIpResolver geoIpResolver,
+        INetworkInterfaceService nicService)
     {
         _etwMonitor = etwMonitor;
         _processResolver = processResolver;
         _geoIpResolver = geoIpResolver;
+        _nicService = nicService;
         _dispatcher = Dispatcher.CurrentDispatcher;
 
         EventsView = CollectionViewSource.GetDefaultView(Events);
@@ -53,6 +57,13 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
 
     private void OnEventBatch(IList<TrafficEvent> batch)
     {
+        // Lazy-load NIC cache on first batch
+        if (!_nicCacheLoaded)
+        {
+            _nicCacheLoaded = true;
+            _ = _nicService.RefreshAsync();
+        }
+
         foreach (var evt in batch)
         {
             // Enrich with process and geo info
@@ -64,6 +75,10 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
                 var geoInfo = _geoIpResolver.Resolve(evt.DestinationAddress);
                 evt.Country = geoInfo.DisplayCountry;
             }
+
+            // Resolve NIC from source IP
+            if (evt.SourceAddress != null)
+                evt.InterfaceName = _nicService.ResolveInterfaceByIp(evt.SourceAddress);
 
             _eventBuffer.Add(evt);
             Events.Add(evt);
@@ -86,25 +101,64 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     {
         if (obj is not TrafficEvent evt) return false;
 
-        if (!string.IsNullOrEmpty(FilterSourceIp) &&
-            evt.SourceAddress?.ToString().Contains(FilterSourceIp, StringComparison.OrdinalIgnoreCase) != true)
+        if (!MatchesFilter(FilterSourceIp, evt.SourceAddress?.ToString()))
+            return false;
+        if (!MatchesFilter(FilterDestIp, evt.DestinationAddress?.ToString()))
+            return false;
+        if (!MatchesFilter(FilterProtocol, evt.Protocol.ToString()))
+            return false;
+        if (!MatchesFilter(FilterProcess, evt.ProcessName))
+            return false;
+        if (!MatchesFilter(FilterNic, evt.InterfaceName))
             return false;
 
-        if (!string.IsNullOrEmpty(FilterDestIp) &&
-            evt.DestinationAddress?.ToString().Contains(FilterDestIp, StringComparison.OrdinalIgnoreCase) != true)
-            return false;
+        return true;
+    }
 
-        if (!string.IsNullOrEmpty(FilterProtocol) &&
-            !evt.Protocol.ToString().Contains(FilterProtocol, StringComparison.OrdinalIgnoreCase))
-            return false;
+    /// <summary>
+    /// Supports multiple comma-separated terms. Prefix a term with ! to exclude.
+    /// e.g. "!192.168.1.1,!10.0.0.1" excludes both IPs.
+    /// e.g. "chrome,firefox" includes either.
+    /// Mixed: "!svchost" excludes svchost.
+    /// </summary>
+    private static bool MatchesFilter(string filter, string? fieldValue)
+    {
+        if (string.IsNullOrEmpty(filter)) return true;
 
-        if (!string.IsNullOrEmpty(FilterProcess) &&
-            evt.ProcessName?.Contains(FilterProcess, StringComparison.OrdinalIgnoreCase) != true)
-            return false;
+        var terms = filter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (terms.Length == 0) return true;
 
-        if (!string.IsNullOrEmpty(FilterNic) &&
-            evt.InterfaceName?.Contains(FilterNic, StringComparison.OrdinalIgnoreCase) != true)
-            return false;
+        var negTerms = new List<string>();
+        var posTerms = new List<string>();
+        foreach (var term in terms)
+        {
+            if (term.StartsWith('!') && term.Length > 1)
+                negTerms.Add(term[1..]);
+            else
+                posTerms.Add(term);
+        }
+
+        // Negative filters: if field matches ANY negation, exclude
+        foreach (var neg in negTerms)
+        {
+            if (fieldValue?.Contains(neg, StringComparison.OrdinalIgnoreCase) == true)
+                return false;
+        }
+
+        // Positive filters: field must match at least one (OR logic)
+        if (posTerms.Count > 0)
+        {
+            bool anyMatch = false;
+            foreach (var pos in posTerms)
+            {
+                if (fieldValue?.Contains(pos, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    anyMatch = true;
+                    break;
+                }
+            }
+            if (!anyMatch) return false;
+        }
 
         return true;
     }
@@ -117,6 +171,96 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
         Events.Clear();
         _eventBuffer.Clear();
         EventCount = 0;
+    }
+
+    [RelayCommand]
+    private void FilterBySourceIp()
+    {
+        if (SelectedEvent?.SourceAddress != null)
+            FilterSourceIp = SelectedEvent.SourceAddress.ToString();
+    }
+
+    [RelayCommand]
+    private void FilterByDestIp()
+    {
+        if (SelectedEvent?.DestinationAddress != null)
+            FilterDestIp = SelectedEvent.DestinationAddress.ToString();
+    }
+
+    [RelayCommand]
+    private void FilterByProtocol()
+    {
+        if (SelectedEvent != null)
+            FilterProtocol = SelectedEvent.Protocol.ToString();
+    }
+
+    [RelayCommand]
+    private void FilterByProcess()
+    {
+        if (SelectedEvent?.ProcessName != null)
+            FilterProcess = SelectedEvent.ProcessName;
+    }
+
+    [RelayCommand]
+    private void FilterByNic()
+    {
+        if (SelectedEvent?.InterfaceName != null)
+            FilterNic = SelectedEvent.InterfaceName;
+    }
+
+    [RelayCommand]
+    private void ExcludeSourceIp()
+    {
+        if (SelectedEvent?.SourceAddress != null)
+            FilterSourceIp = AppendNegation(FilterSourceIp, SelectedEvent.SourceAddress.ToString());
+    }
+
+    [RelayCommand]
+    private void ExcludeDestIp()
+    {
+        if (SelectedEvent?.DestinationAddress != null)
+            FilterDestIp = AppendNegation(FilterDestIp, SelectedEvent.DestinationAddress.ToString());
+    }
+
+    [RelayCommand]
+    private void ExcludeProtocol()
+    {
+        if (SelectedEvent != null)
+            FilterProtocol = AppendNegation(FilterProtocol, SelectedEvent.Protocol.ToString());
+    }
+
+    [RelayCommand]
+    private void ExcludeProcess()
+    {
+        if (SelectedEvent?.ProcessName != null)
+            FilterProcess = AppendNegation(FilterProcess, SelectedEvent.ProcessName);
+    }
+
+    [RelayCommand]
+    private void ExcludeNic()
+    {
+        if (SelectedEvent?.InterfaceName != null)
+            FilterNic = AppendNegation(FilterNic, SelectedEvent.InterfaceName);
+    }
+
+    private static string AppendNegation(string current, string value)
+    {
+        var negTerm = $"!{value}";
+        if (string.IsNullOrEmpty(current))
+            return negTerm;
+        if (current.Contains(negTerm, StringComparison.OrdinalIgnoreCase))
+            return current;
+        return $"{current},{negTerm}";
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        FilterSourceIp = string.Empty;
+        FilterDestIp = string.Empty;
+        FilterProtocol = string.Empty;
+        FilterProcess = string.Empty;
+        FilterNic = string.Empty;
     }
 
     [RelayCommand]

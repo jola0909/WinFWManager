@@ -11,19 +11,24 @@
         </Grid.RowDefinitions>
 
         <!-- Filter Row -->
-        <Border Grid.Row="0" Background="{DynamicResource SecondaryBgBrush}" Padding="8">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Src IP:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding FilterSourceIp, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="0,0,8,0"/>
-                <TextBlock Text="Dst IP:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding FilterDestIp, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="0,0,8,0"/>
-                <TextBlock Text="Protocol:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding FilterProtocol, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="0,0,8,0"/>
-                <TextBlock Text="Process:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding FilterProcess, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="0,0,8,0"/>
-                <TextBlock Text="NIC:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding FilterNic, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="0,0,8,0"/>
-                <Button Content="Clear" Command="{Binding ClearEventsCommand}" Margin="8,0,0,0" Padding="8,2"/>
+        <Border Grid.Row="0" Background="{DynamicResource SecondaryBgBrush}" Padding="8,6,8,4">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Src IP:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FilterSourceIp, UpdateSourceTrigger=PropertyChanged}" Width="140" Margin="0,0,8,0"/>
+                    <TextBlock Text="Dst IP:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FilterDestIp, UpdateSourceTrigger=PropertyChanged}" Width="140" Margin="0,0,8,0"/>
+                    <TextBlock Text="Protocol:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FilterProtocol, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="0,0,8,0"/>
+                    <TextBlock Text="Process:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FilterProcess, UpdateSourceTrigger=PropertyChanged}" Width="140" Margin="0,0,8,0"/>
+                    <TextBlock Text="NIC:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FilterNic, UpdateSourceTrigger=PropertyChanged}" Width="130" Margin="0,0,8,0"/>
+                    <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" Margin="8,0,0,0"/>
+                    <Button Content="Clear Events" Command="{Binding ClearEventsCommand}" Margin="4,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="Tip: prefix with ! to exclude (e.g. !svchost)  •  comma-separate multiple terms (e.g. !10.0.0.1,!192.168.1.1)"
+                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,3,0,0" Opacity="0.6"/>
             </StackPanel>
         </Border>
 
@@ -45,9 +50,47 @@
 
             <DataGrid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Include" FontWeight="SemiBold" IsEnabled="False"/>
+                    <MenuItem Header="  Filter by Source IP"
+                              Command="{Binding PlacementTarget.DataContext.FilterBySourceIpCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Filter by Dest IP"
+                              Command="{Binding PlacementTarget.DataContext.FilterByDestIpCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Filter by Protocol"
+                              Command="{Binding PlacementTarget.DataContext.FilterByProtocolCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Filter by Process"
+                              Command="{Binding PlacementTarget.DataContext.FilterByProcessCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Filter by NIC"
+                              Command="{Binding PlacementTarget.DataContext.FilterByNicCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <Separator/>
+                    <MenuItem Header="Exclude" FontWeight="SemiBold" IsEnabled="False"/>
+                    <MenuItem Header="  Exclude Source IP"
+                              Command="{Binding PlacementTarget.DataContext.ExcludeSourceIpCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Exclude Dest IP"
+                              Command="{Binding PlacementTarget.DataContext.ExcludeDestIpCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Exclude Protocol"
+                              Command="{Binding PlacementTarget.DataContext.ExcludeProtocolCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Exclude Process"
+                              Command="{Binding PlacementTarget.DataContext.ExcludeProcessCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="  Exclude NIC"
+                              Command="{Binding PlacementTarget.DataContext.ExcludeNicCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <Separator/>
+                    <MenuItem Header="Clear All Filters"
+                              Command="{Binding PlacementTarget.DataContext.ClearFiltersCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <Separator/>
                     <MenuItem Header="Create Rule from Traffic..."
-                              Command="{Binding DataContext.CreateRuleFromTrafficCommand,
-                                        RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                              Command="{Binding PlacementTarget.DataContext.CreateRuleFromTrafficCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
 

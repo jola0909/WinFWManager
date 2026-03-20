@@ -35,6 +35,8 @@ public partial class RulesManagerViewModel : ObservableObject
 
         RulesView = CollectionViewSource.GetDefaultView(Rules);
         RulesView.Filter = FilterPredicate;
+
+        _ = RefreshRulesAsync();
     }
 
     partial void OnSelectedStoreChanged(FirewallStore value) => _ = RefreshRulesAsync();
@@ -42,10 +44,13 @@ public partial class RulesManagerViewModel : ObservableObject
     partial void OnSearchTextChanged(string value) => RulesView.Refresh();
     partial void OnShowHyperVRulesChanged(bool value) => _ = RefreshRulesAsync();
 
+    [ObservableProperty] private string _errorMessage = string.Empty;
+
     [RelayCommand]
     private async Task RefreshRulesAsync()
     {
         IsLoading = true;
+        ErrorMessage = string.Empty;
         try
         {
             Rules.Clear();
@@ -60,6 +65,10 @@ public partial class RulesManagerViewModel : ObservableObject
                 Rules.Add(rule);
 
             RuleCount = Rules.Count;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load rules: {ex.Message}";
         }
         finally
         {

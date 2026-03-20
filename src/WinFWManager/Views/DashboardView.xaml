@@ -55,8 +55,41 @@
                 </Border>
             </UniformGrid>
 
+            <!-- Network Traffic Graph -->
+            <Border Grid.Row="1" Background="{DynamicResource SecondaryBgBrush}"
+                    CornerRadius="6" Padding="16" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header with filter -->
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Network Traffic Graph" DockPanel.Dock="Left"
+                                   Foreground="{DynamicResource PrimaryTextBrush}"
+                                   FontSize="14" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <TextBox DockPanel.Dock="Right" Width="200"
+                                 Text="{Binding GraphFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="6,4"/>
+                        <TextBlock Text="Filter:" DockPanel.Dock="Right" Margin="0,0,6,0"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel/> <!-- spacer -->
+                    </DockPanel>
+
+                    <!-- Graph Canvas -->
+                    <Canvas x:Name="GraphCanvas" Grid.Row="1"
+                            ClipToBounds="True"
+                            Background="Transparent"
+                            Height="380"
+                            SizeChanged="GraphCanvas_SizeChanged"/>
+                </Grid>
+            </Border>
+
             <!-- Top Talkers -->
-            <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid Grid.Row="2" Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="16"/>

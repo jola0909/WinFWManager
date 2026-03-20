@@ -25,7 +25,7 @@ public sealed class CimFirewallQueryService : IDisposable
         var rulesTask = Task.Run(() => QueryRules());
         var portsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Protocol, LocalPort, RemotePort FROM MSFT_NetProtocolPortFilter"));
         var addrsTask = Task.Run(() => QueryInstances("SELECT InstanceID, LocalAddress, RemoteAddress FROM MSFT_NetAddressFilter"));
-        var appsTask = Task.Run(() => QueryInstances("SELECT InstanceID, Program FROM MSFT_NetApplicationFilter"));
+        var appsTask = Task.Run(() => QueryInstances("SELECT InstanceID, AppPath FROM MSFT_NetApplicationFilter"));
 
         await Task.WhenAll(rulesTask, portsTask, addrsTask, appsTask);
 
@@ -46,7 +46,7 @@ public sealed class CimFirewallQueryService : IDisposable
             rule.RemotePort = JoinArray(port, "RemotePort");
             rule.LocalAddress = JoinArray(addr, "LocalAddress");
             rule.RemoteAddress = JoinArray(addr, "RemoteAddress");
-            rule.Program = GetStr(app, "Program");
+            rule.Program = GetStr(app, "AppPath");
             rule.Store = store;
 
             results.Add(rule);

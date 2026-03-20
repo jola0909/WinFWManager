@@ -1,70 +1,63 @@
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
+using System.Diagnostics;
+using System.Text;
 
 namespace WinFWManager.Core.Services;
 
+/// <summary>
+/// Executes PowerShell scripts via the native Windows PowerShell 5.1 subprocess.
+/// This ensures full compatibility with CDXML-based modules like NetSecurity.
+/// </summary>
 public class PowerShellRunspacePool : IDisposable
 {
-    private readonly RunspacePool _pool;
+    private static readonly string PowerShellExe = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.System),
+        @"WindowsPowerShell\v1.0\powershell.exe");
 
-    public PowerShellRunspacePool(int minRunspaces = 1, int maxRunspaces = 5)
+    public async Task<string> InvokeAsync(string script, Dictionary<string, object>? parameters = null)
     {
-        var iss = InitialSessionState.CreateDefault2();
-        iss.ImportPSModule(new[] { "NetSecurity" });
-        _pool = RunspaceFactory.CreateRunspacePool(iss);
-        _pool.SetMinRunspaces(minRunspaces);
-        _pool.SetMaxRunspaces(maxRunspaces);
-        _pool.Open();
-    }
-
-    public async Task<IReadOnlyList<T>> InvokeAsync<T>(string script, Dictionary<string, object>? parameters = null)
-    {
-        using var ps = PowerShell.Create();
-        ps.RunspacePool = _pool;
-        ps.AddScript(script);
-
+        var fullScript = new StringBuilder();
         if (parameters != null)
         {
-            foreach (var p in parameters)
-                ps.AddParameter(p.Key, p.Value);
+            foreach (var (key, value) in parameters)
+            {
+                var escaped = value?.ToString()?.Replace("'", "''") ?? "";
+                fullScript.AppendLine($"${key} = '{escaped}'");
+            }
         }
+        fullScript.Append(script);
 
-        var results = await Task.Run(() => ps.Invoke<T>());
+        var encoded = Convert.ToBase64String(
+            Encoding.Unicode.GetBytes(fullScript.ToString()));
 
-        if (ps.HadErrors)
+        var psi = new ProcessStartInfo
         {
-            var errors = string.Join("; ", ps.Streams.Error.Select(e => e.ToString()));
-            throw new InvalidOperationException($"PowerShell error: {errors}");
+            FileName = PowerShellExe,
+            Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand {encoded}",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = new Process { StartInfo = psi };
+        process.Start();
+
+        // Read stdout and stderr concurrently to avoid deadlocks
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+
+        var output = await outputTask;
+        var error = await errorTask;
+        await process.WaitForExitAsync();
+
+        if (process.ExitCode != 0)
+        {
+            var msg = string.IsNullOrWhiteSpace(error) ? output.Trim() : error.Trim();
+            throw new InvalidOperationException($"PowerShell error: {msg}");
         }
 
-        return results.ToList().AsReadOnly();
+        return output;
     }
 
-    public async Task InvokeAsync(string script, Dictionary<string, object>? parameters = null)
-    {
-        using var ps = PowerShell.Create();
-        ps.RunspacePool = _pool;
-        ps.AddScript(script);
-
-        if (parameters != null)
-        {
-            foreach (var p in parameters)
-                ps.AddParameter(p.Key, p.Value);
-        }
-
-        await Task.Run(() => ps.Invoke());
-
-        if (ps.HadErrors)
-        {
-            var errors = string.Join("; ", ps.Streams.Error.Select(e => e.ToString()));
-            throw new InvalidOperationException($"PowerShell error: {errors}");
-        }
-    }
-
-    public void Dispose()
-    {
-        _pool.Close();
-        _pool.Dispose();
-        GC.SuppressFinalize(this);
-    }
+    public void Dispose() { }
 }

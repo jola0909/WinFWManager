@@ -9,6 +9,7 @@ public class NetworkInterfaceService : INetworkInterfaceService
 {
     private List<NetworkAdapterInfo> _adapters = new();
     private readonly ConcurrentDictionary<long, string> _luidToName = new();
+    private readonly ConcurrentDictionary<string, string> _ipToName = new(StringComparer.Ordinal);
 
     public async Task<IReadOnlyList<NetworkAdapterInfo>> GetAllAdaptersAsync()
     {
@@ -56,12 +57,29 @@ public class NetworkInterfaceService : INetworkInterfaceService
         }
 
         _adapters = adapters;
+
+        // Build IP → adapter name lookup
+        _ipToName.Clear();
+        foreach (var a in adapters)
+        {
+            foreach (var ip in a.IpAddresses)
+                _ipToName[ip.ToString()] = a.Name;
+        }
+
         return Task.CompletedTask;
     }
 
     public string? ResolveInterfaceName(long interfaceLuid)
     {
         if (_luidToName.TryGetValue(interfaceLuid, out var name))
+            return name;
+
+        return null;
+    }
+
+    public string? ResolveInterfaceByIp(IPAddress address)
+    {
+        if (_ipToName.TryGetValue(address.ToString(), out var name))
             return name;
 
         return null;

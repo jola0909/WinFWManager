@@ -15,9 +15,24 @@ public partial class NetworkInterfacesViewModel : ObservableObject
     [ObservableProperty] private NetworkAdapterInfo? _selectedAdapter;
     [ObservableProperty] private bool _isLoading;
 
+    private bool _hasLoadedOnce;
+
     public NetworkInterfacesViewModel(INetworkInterfaceService nicService)
     {
         _nicService = nicService;
+    }
+
+    /// <summary>
+    /// Called when the view becomes visible (tab selected).
+    /// Triggers auto-refresh on first view, and can be called to refresh on subsequent visits.
+    /// </summary>
+    public async Task OnActivatedAsync()
+    {
+        if (!_hasLoadedOnce)
+        {
+            _hasLoadedOnce = true;
+            await RefreshAsync();
+        }
     }
 
     [RelayCommand]

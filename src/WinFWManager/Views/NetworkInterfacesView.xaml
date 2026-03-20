@@ -7,22 +7,57 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
         <Border Grid.Row="0" Background="{DynamicResource SecondaryBgBrush}" Padding="8">
-            <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="12,4"/>
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button Content="&#x21BB;  Refresh" Command="{Binding RefreshCommand}"
+                            Style="{DynamicResource AccentButton}" Padding="16,6" FontSize="13"/>
+                </StackPanel>
+
+                <!-- Loading indicator -->
+                <TextBlock DockPanel.Dock="Right" Text="Loading..."
+                           Foreground="{DynamicResource AccentBrush}" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,8,0"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"/>
+
+                <!-- Adapter count -->
+                <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
+                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12">
+                    <Run Text="{Binding Adapters.Count, Mode=OneWay}"/>
+                    <Run Text=" adapters"/>
+                </TextBlock>
+            </DockPanel>
         </Border>
 
         <!-- Adapter List -->
         <ListView Grid.Row="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter}"
                   Background="{DynamicResource PrimaryBgBrush}"
                   Foreground="{DynamicResource PrimaryTextBrush}"
-                  BorderThickness="0">
+                  BorderThickness="0"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Border Padding="12,8" Margin="4" CornerRadius="4"
-                            Background="{DynamicResource SecondaryBgBrush}">
+                    <Border Padding="14,10" Margin="6,3" CornerRadius="6"
+                            Background="{DynamicResource SecondaryBgBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -35,10 +70,10 @@
                             </Grid.RowDefinitions>
 
                             <!-- Name + Type Badge -->
-                            <StackPanel Grid.Row="0" Orientation="Horizontal">
-                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,8,0"/>
-                                <Border CornerRadius="3" Padding="6,2">
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,10,0"/>
+                                <Border CornerRadius="4" Padding="8,3">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="{DynamicResource TertiaryBgBrush}"/>
@@ -55,20 +90,22 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <TextBlock Text="{Binding AdapterType}" FontSize="10"
+                                    <TextBlock Text="{Binding AdapterType}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{DynamicResource PrimaryTextBrush}"/>
                                 </Border>
                             </StackPanel>
 
                             <!-- Status -->
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Status}"
-                                       VerticalAlignment="Center" FontSize="12">
+                            <TextBlock Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                                       FontSize="13" FontWeight="SemiBold">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                                        <Setter Property="Text" Value="{Binding Status}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Status}" Value="Up">
                                                 <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Text" Value="&#x25CF;  Up"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -76,16 +113,16 @@
                             </TextBlock>
 
                             <!-- Details -->
-                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11">
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12">
                                 <Run Text="Alias: "/><Run Text="{Binding InterfaceAlias, Mode=OneWay}"/>
                                 <Run Text="  |  MAC: "/><Run Text="{Binding MacAddress, Mode=OneWay, TargetNullValue='N/A'}"/>
                                 <Run Text="  |  Profile: "/><Run Text="{Binding AssignedProfile, Mode=OneWay}"/>
                             </TextBlock>
 
                             <!-- IP Addresses -->
-                            <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,2,0,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11">
+                            <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,3,0,0"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12">
                                 <Run Text="IPs: "/>
                                 <Run Text="{Binding IpAddresses, Mode=OneWay, Converter={x:Static converters:IpListConverter.Instance}}"/>
                             </TextBlock>
@@ -94,5 +131,13 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <!-- Bottom Status -->
+        <Border Grid.Row="2" Background="{DynamicResource SecondaryBgBrush}" Padding="8,4"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11">
+                <Run Text="Network adapters loaded. Click Refresh to update."/>
+            </TextBlock>
+        </Border>
     </Grid>
 </UserControl>

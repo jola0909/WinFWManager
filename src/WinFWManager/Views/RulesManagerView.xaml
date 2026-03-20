@@ -79,10 +79,13 @@
 
         <!-- Bottom Status -->
         <Border Grid.Row="3" Background="{DynamicResource SecondaryBgBrush}" Padding="8,4">
-            <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11">
-                <Run Text="Rules: "/>
-                <Run Text="{Binding RuleCount, Mode=OneWay}"/>
-            </TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11">
+                    <Run Text="Rules: "/>
+                    <Run Text="{Binding RuleCount, Mode=OneWay}"/>
+                </TextBlock>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF6B6B" FontSize="11" Margin="16,0,0,0"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>
