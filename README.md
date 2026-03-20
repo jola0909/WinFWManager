@@ -33,30 +33,32 @@ A modern Windows Firewall management application built with WPF and .NET 8. Moni
 - View all network adapters with status, IP addresses, MAC, speed, and type
 - Auto-refreshes on first visit
 
-## Requirements
+## Quick Install
 
-- **Windows 10/11** (or Windows Server 2016+)
-- **.NET 8.0 Runtime** — [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
-- **Run as Administrator** — required for ETW traffic capture and firewall rule management
+### Option 1: Download (Recommended)
 
-## Getting Started
+1. Go to the [**Latest Release**](https://github.com/jola0909/WinFWManager/releases/latest)
+2. Download **`WinFWManager-standalone.exe`** (~150 MB, no dependencies needed)
+3. Right-click → **Run as Administrator**
 
-### Build from Source
+That's it — single exe, nothing to install.
+
+> 💡 **Smaller download?** Grab `WinFWManager-portable.exe` (~15 MB) instead, but you'll need [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed.
+
+### Option 2: Build from Source
 
 ```bash
 git clone https://github.com/jola0909/WinFWManager.git
 cd WinFWManager
-dotnet build src/WinFWManager/WinFWManager.csproj -c Release
+dotnet publish src/WinFWManager/WinFWManager.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 ```
 
-### Run
+The exe will be in `src/WinFWManager/bin/Release/net8.0-windows/win-x64/publish/`.
 
-```bash
-# Must run as Administrator
-dotnet run --project src/WinFWManager/WinFWManager.csproj -c Release
-```
+## Requirements
 
-Or open the solution in Visual Studio and press F5.
+- **Windows 10/11** (or Windows Server 2016+)
+- **Run as Administrator** — required for ETW traffic capture and firewall rule management
 
 ## Architecture
 
