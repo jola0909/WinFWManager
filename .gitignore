@@ -9,6 +9,9 @@
 # Tools
 tools/
 
+# Publish output
+publish/
+
 # dotenv files
 .env
 
