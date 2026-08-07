@@ -207,6 +207,11 @@ publish/
 # in these scripts will be unencrypted
 PublishScripts/
 
+# Local NuGet feed configuration is kept out of the repo. A plain clone resolves
+# every package from nuget.org without this file.
+NuGet.config
+nuget.config
+
 # NuGet Packages
 *.nupkg
 # NuGet Symbol Packages
@@ -491,3 +496,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Test fixtures — keep sample logs under TestData despite the *.log rule above
+!tests/WinFWManager.Tests/TestData/*.log
