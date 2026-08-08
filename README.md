@@ -40,7 +40,37 @@ A modern Windows Firewall management application built with WPF and .NET 10. Mon
 ### Network Interfaces
 - View all network adapters with status, IP addresses, MAC, speed, and type
 - **WSL networking-mode badge** showing the detected mode (NAT / Mirrored / Bridged) and the guest IP
+- **Pseudo-adapters hidden by default** — .NET reports every NDIS binding (48 on a typical
+  machine: WFP/QoS filter bindings, WAN miniports, tunnel interfaces). Only adapters Windows
+  itself lists are shown, with a *Show hidden adapters* toggle to see the rest
 - Auto-refreshes on first visit
+
+### AI Connection (MCP)
+WinFW Manager can expose its **live UI state** to an MCP client, so you can ask an AI about
+what you are looking at instead of describing it or pasting screenshots.
+
+Click **AI Connect** in the title bar, press **Start**, and run the command it shows:
+
+```
+claude mcp add --transport http winfw http://127.0.0.1:7337/mcp --header "Authorization: Bearer <token>"
+```
+
+Available tools:
+
+| Tool | Purpose |
+|------|---------|
+| `get_current_view` | Active tab, its filters, and the rows actually visible right now |
+| `get_adapters` | Adapters, optionally including hidden pseudo-adapters |
+| `get_traffic_events` | Captured events, honouring the Traffic Monitor's filters |
+| `get_dashboard` | Stats, top talkers, and the traffic-graph topology |
+| `get_rules` | Firewall rules as loaded in Rules Manager |
+| `set_traffic_filter` / `clear_traffic_filters` | Drive the Traffic Monitor's filters |
+| `select_tab` | Switch the active tab |
+
+> **Security.** The app runs elevated, so the endpoint is **off until you start it**, binds to
+> **127.0.0.1 only**, and requires a bearer token generated per run and never written to disk.
+> There is **no firewall-write surface** — no tool can create, modify or delete a rule, so the
+> worst an automated caller can do is change what is displayed.
 
 ## Quick Install
 

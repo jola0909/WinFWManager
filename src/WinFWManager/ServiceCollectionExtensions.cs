@@ -38,6 +38,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NetworkInterfacesViewModel>();
         services.AddSingleton<DashboardViewModel>();
 
+        // Local MCP endpoint — constructed here but not started; the user starts it
+        // explicitly from the AI Connect dialog.
+        services.AddSingleton(sp => new Mcp.McpServerHost(sp));
+
         return services;
     }
 }

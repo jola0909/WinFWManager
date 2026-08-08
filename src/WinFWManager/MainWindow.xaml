@@ -45,6 +45,12 @@
                         Command="{Binding ToggleMonitoringCommand}"
                         Margin="8,0" Padding="16,6" VerticalAlignment="Center"/>
 
+                <!-- Local MCP endpoint for AI clients -->
+                <Button DockPanel.Dock="Right" Content="AI Connect"
+                        Click="OnAiConnectClick"
+                        Margin="8,0" Padding="16,6" VerticalAlignment="Center"
+                        ToolTip="Let an MCP client read this window's live state and set filters for you"/>
+
                 <StackPanel/>
             </DockPanel>
         </Border>

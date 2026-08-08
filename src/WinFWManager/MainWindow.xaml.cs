@@ -11,4 +11,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<MainViewModel>();
     }
+
+    private void OnAiConnectClick(object sender, RoutedEventArgs e)
+        => new Views.McpConnectDialog { Owner = this }.ShowDialog();
 }
