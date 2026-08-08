@@ -56,6 +56,19 @@ public class TrafficEvent : INotifyPropertyChanged
     /// adapter during enrichment.</summary>
     public int? InterfaceIndexHint { get; set; }
 
+    /// <summary>
+    /// The far end of the connection: the destination when we sent it, the source when
+    /// we received it. Enrichment, top talkers and the graph all key off this. Deriving
+    /// it separately in each caller is what left the dashboard grouping inbound traffic
+    /// by this machine's own address, so it lives here now.
+    /// </summary>
+    public IPAddress? RemoteAddress
+        => Direction == TrafficDirection.Outbound ? DestinationAddress : SourceAddress;
+
+    /// <summary>This machine's end of the connection — the mirror of <see cref="RemoteAddress"/>.</summary>
+    public IPAddress? LocalAddress
+        => Direction == TrafficDirection.Outbound ? SourceAddress : DestinationAddress;
+
     /// <summary>Compact flow path, e.g. "WSL guest → vEthernet (WSL) ⛔".</summary>
     public string FlowDescription
     {

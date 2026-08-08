@@ -377,26 +377,26 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(HasFilters));
 
-        // Top talkers by destination IP
+        // Top talkers by remote peer
         FillTopTalkers(TopTalkers, events
-            .Where(e => e.DestinationAddress != null));
+            .Where(e => e.RemoteAddress != null));
 
-        // Top blocked destinations
+        // Top blocked peers
         FillTopTalkers(TopBlocked, events
-            .Where(e => e.Action is TrafficAction.Block or TrafficAction.Drop && e.DestinationAddress != null));
+            .Where(e => e.Action is TrafficAction.Block or TrafficAction.Drop && e.RemoteAddress != null));
 
         var graph = TrafficGraphBuilder.Build(events, _adapters, _expandedGroups);
         ApplyHostnames(graph);
         GraphData = graph;
     }
 
-    /// <summary>Groups events by destination IP into the top 5 entries, with
+    /// <summary>Groups events by remote peer into the top 5 entries, with
     /// each entry's share of the leader for the inline bars.</summary>
     private void FillTopTalkers(ObservableCollection<TopTalkerEntry> target,
         IEnumerable<TrafficEvent> events)
     {
         var entries = events
-            .GroupBy(e => e.DestinationAddress!.ToString())
+            .GroupBy(e => e.RemoteAddress!.ToString())
             .OrderByDescending(g => g.Count())
             .Take(5)
             .Select(g => new TopTalkerEntry

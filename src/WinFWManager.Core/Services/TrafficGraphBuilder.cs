@@ -36,10 +36,10 @@ public static class TrafficGraphBuilder
                 return string.Equals(evt.InterfaceName, drill.Value, StringComparison.Ordinal);
 
             case GraphNodeKind.Remote:
-                return RemoteEndpoint(evt)?.ToString() == drill.Value;
+                return evt.RemoteAddress?.ToString() == drill.Value;
 
             case GraphNodeKind.RemoteGroup:
-                var remote = RemoteEndpoint(evt);
+                var remote = evt.RemoteAddress;
                 return remote != null
                     && Classify(remote, adapters) == Enum.Parse<RemoteGroupKind>(drill.Value);
 
@@ -63,7 +63,7 @@ public static class TrafficGraphBuilder
         var groupByIp = new Dictionary<string, RemoteGroupKind>(StringComparer.Ordinal);
         foreach (var evt in events)
         {
-            var remote = RemoteEndpoint(evt);
+            var remote = evt.RemoteAddress;
             if (remote is null || string.IsNullOrEmpty(evt.InterfaceName)) continue;
 
             string ip = remote.ToString();
@@ -297,10 +297,6 @@ public static class TrafficGraphBuilder
         }
         return false;
     }
-
-    private static IPAddress? RemoteEndpoint(TrafficEvent evt)
-        => evt.Direction == TrafficDirection.Outbound
-            ? evt.DestinationAddress : evt.SourceAddress;
 
     private static string ProcessLabel(TrafficEvent evt)
         => string.IsNullOrEmpty(evt.ProcessName) ? SystemProcessLabel : evt.ProcessName;

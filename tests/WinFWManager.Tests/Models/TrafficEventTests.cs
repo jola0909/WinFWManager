@@ -146,6 +146,37 @@ public class TrafficEventTests
     }
 
     [Fact]
+    public void RemoteAddress_Outbound_IsDestination_Inbound_IsSource()
+    {
+        var outbound = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound,
+            SourceAddress = IPAddress.Parse("192.168.1.51"),
+            DestinationAddress = IPAddress.Parse("8.8.8.8"),
+        };
+        outbound.RemoteAddress.Should().Be(IPAddress.Parse("8.8.8.8"));
+        outbound.LocalAddress.Should().Be(IPAddress.Parse("192.168.1.51"));
+
+        var inbound = new TrafficEvent
+        {
+            Direction = TrafficDirection.Inbound,
+            SourceAddress = IPAddress.Parse("8.8.8.8"),
+            DestinationAddress = IPAddress.Parse("192.168.1.51"),
+        };
+        // The regression that made this machine its own top talker: grouping inbound
+        // events by destination buckets everything under the local address.
+        inbound.RemoteAddress.Should().Be(IPAddress.Parse("8.8.8.8"));
+        inbound.LocalAddress.Should().Be(IPAddress.Parse("192.168.1.51"));
+    }
+
+    [Fact]
+    public void RemoteAddress_MissingEndpoint_IsNull()
+    {
+        new TrafficEvent { Direction = TrafficDirection.Outbound }.RemoteAddress.Should().BeNull();
+        new TrafficEvent { Direction = TrafficDirection.Inbound }.RemoteAddress.Should().BeNull();
+    }
+
+    [Fact]
     public void Hostname_WhenSet_RaisesPropertyChanged()
     {
         // Reverse DNS completes after the row is already displayed, so the back-fill
