@@ -26,12 +26,16 @@
                            VerticalAlignment="Center" Margin="0,0,8,0"
                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"/>
 
+                <!-- Show NDIS pseudo-adapters (WFP/QoS filter bindings, WAN miniports) -->
+                <CheckBox DockPanel.Dock="Right" Content="Show hidden adapters"
+                          IsChecked="{Binding ShowHiddenAdapters}"
+                          VerticalAlignment="Center" Margin="0,0,12,0" FontSize="12"
+                          ToolTip="Include NDIS filter bindings and WAN miniports that Windows hides by default"/>
+
                 <!-- Adapter count -->
                 <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
-                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12">
-                    <Run Text="{Binding Adapters.Count, Mode=OneWay}"/>
-                    <Run Text=" adapters"/>
-                </TextBlock>
+                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"
+                           Text="{Binding AdapterCountText}"/>
             </DockPanel>
         </Border>
 

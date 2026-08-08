@@ -17,6 +17,15 @@ public class NetworkAdapterInfo
     public string? VSwitchName { get; set; }
     public int InterfaceIndex { get; set; }
 
+    /// <summary>
+    /// True for NDIS pseudo-adapters that Windows itself hides — lightweight filter
+    /// bindings (WFP, QoS Packet Scheduler) and WAN miniports. These are what
+    /// <c>Get-NetAdapter</c> omits unless you pass <c>-IncludeHidden</c>. They are kept
+    /// in the adapter list so traffic attribution still sees them, but the UI filters
+    /// them out by default.
+    /// </summary>
+    public bool IsHidden { get; set; }
+
     public bool IsVirtual => AdapterType is AdapterType.Virtual
         or AdapterType.VSwitch or AdapterType.WSL or AdapterType.HyperV;
 }

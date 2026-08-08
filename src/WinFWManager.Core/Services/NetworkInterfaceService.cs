@@ -5,11 +5,16 @@ using WinFWManager.Core.Models;
 
 namespace WinFWManager.Core.Services;
 
-public class NetworkInterfaceService : INetworkInterfaceService
+public class NetworkInterfaceService : INetworkInterfaceService, IDisposable
 {
     private List<NetworkAdapterInfo> _adapters = new();
     private readonly ConcurrentDictionary<long, string> _luidToName = new();
     private readonly ConcurrentDictionary<string, string> _ipToName = new(StringComparer.Ordinal);
+    private readonly Lazy<CimNetAdapterQueryService?> _cim = new(() =>
+    {
+        try { return new CimNetAdapterQueryService(); }
+        catch { return null; }
+    });
 
     public NetworkInterfaceService()
     {
@@ -27,6 +32,18 @@ public class NetworkInterfaceService : INetworkInterfaceService
     {
         var interfaces = NetworkInterface.GetAllNetworkInterfaces();
         var adapters = new List<NetworkAdapterInfo>();
+
+        // Authoritative "real adapter" set from CIM; empty when WMI is unavailable, in
+        // which case we fall back to matching driver-supplied pseudo-adapter markers.
+        IReadOnlySet<Guid> cimVisible;
+        try
+        {
+            cimVisible = _cim.Value?.GetVisibleAdapterGuids() ?? new HashSet<Guid>();
+        }
+        catch
+        {
+            cimVisible = new HashSet<Guid>();
+        }
 
         foreach (var ni in interfaces)
         {
@@ -53,16 +70,22 @@ public class NetworkInterfaceService : INetworkInterfaceService
                 // Some adapters don't support IPv4 properties
             }
 
+            Guid.TryParse(ni.Id, out var interfaceGuid);
+            var adapterType = ClassifyAdapter(ni.Name);
+
             var adapter = new NetworkAdapterInfo
             {
                 Name = ni.Name,
                 InterfaceAlias = ni.Description,
-                AdapterType = ClassifyAdapter(ni.Name),
+                InterfaceGuid = interfaceGuid,
+                AdapterType = adapterType,
                 Status = ni.OperationalStatus.ToString(),
                 IpAddresses = addresses,
                 Subnets = subnets,
                 MacAddress = FormatMac(ni.GetPhysicalAddress()),
-                InterfaceIndex = interfaceIndex
+                InterfaceIndex = interfaceIndex,
+                IsHidden = IsHiddenAdapter(
+                    interfaceGuid, ni.Name, ni.Description, adapterType, cimVisible)
             };
 
             adapters.Add(adapter);
@@ -158,6 +181,69 @@ public class NetworkInterfaceService : INetworkInterfaceService
         return best;
     }
 
+    /// <summary>
+    /// Driver-supplied markers for NDIS pseudo-adapters. These strings come from the
+    /// filter/miniport drivers rather than the Windows UI, so they stay in English on
+    /// localized installs — unlike the connection name, which does not.
+    /// Only used when CIM cannot supply the authoritative <c>Hidden</c> flag.
+    /// </summary>
+    private static readonly string[] PseudoAdapterMarkers =
+    {
+        "LightWeight Filter",
+        "QoS Packet Scheduler",
+        "WFP Native MAC Layer",
+        "WFP 802.3 MAC Layer",
+        "Native WiFi Filter Driver",
+        "Virtual Switch Extension",
+        "Virtual Filtering Platform",
+        "WAN Miniport",
+        "Kernel Debug Network Adapter",
+        "Teredo Tunneling",
+        "IP-HTTPS",
+        "6to4",
+        "ISATAP",
+    };
+
+    /// <summary>
+    /// Decides whether an adapter should be hidden from the UI by default.
+    ///
+    /// Prefers CIM: an adapter Windows itself does not list in <c>MSFT_NetAdapter</c> is
+    /// a pseudo-adapter. Falls back to name matching only when CIM returned nothing, so a
+    /// WMI failure degrades to "show a bit too much" rather than "hide everything".
+    /// Loopback is always shown — it never appears in <c>MSFT_NetAdapter</c>, but
+    /// 127.0.0.1 traffic is real and worth monitoring.
+    /// </summary>
+    public static bool IsHiddenAdapter(
+        Guid interfaceGuid, string? name, string? description,
+        AdapterType adapterType, IReadOnlySet<Guid> cimVisibleGuids)
+    {
+        if (adapterType == AdapterType.Loopback)
+            return false;
+
+        if (cimVisibleGuids.Count > 0)
+            return !cimVisibleGuids.Contains(interfaceGuid);
+
+        return LooksLikePseudoAdapter(name, description);
+    }
+
+    /// <summary>
+    /// Heuristic fallback for <see cref="NetworkAdapterInfo.IsHidden"/> when CIM is
+    /// unavailable. Matches on both the connection name and the adapter description,
+    /// since the filter suffix can appear on either.
+    /// </summary>
+    public static bool LooksLikePseudoAdapter(string? name, string? description)
+    {
+        foreach (var marker in PseudoAdapterMarkers)
+        {
+            if (name?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+            if (description?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+        }
+
+        return false;
+    }
+
     public AdapterType ClassifyAdapter(string interfaceName)
     {
         if (string.IsNullOrEmpty(interfaceName))
@@ -191,5 +277,11 @@ public class NetworkInterfaceService : INetworkInterfaceService
         var bytes = mac.GetAddressBytes();
         if (bytes.Length == 0) return null;
         return string.Join(":", bytes.Select(b => b.ToString("X2")));
+    }
+
+    public void Dispose()
+    {
+        if (_cim.IsValueCreated)
+            _cim.Value?.Dispose();
     }
 }

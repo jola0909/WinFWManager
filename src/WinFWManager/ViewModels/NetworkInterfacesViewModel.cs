@@ -17,7 +17,17 @@ public partial class NetworkInterfacesViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string _wslModeText = "";
 
+    /// <summary>
+    /// When false (the default) NDIS pseudo-adapters — WFP/QoS lightweight filter
+    /// bindings and WAN miniports — are omitted, matching what <c>Get-NetAdapter</c>
+    /// shows. A typical machine reports several dozen of these.
+    /// </summary>
+    [ObservableProperty] private bool _showHiddenAdapters;
+
+    [ObservableProperty] private string _adapterCountText = "";
+
     private bool _hasLoadedOnce;
+    private IReadOnlyList<NetworkAdapterInfo> _allAdapters = Array.Empty<NetworkAdapterInfo>();
 
     public NetworkInterfacesViewModel(INetworkInterfaceService nicService, WslNetworkModeDetector wslDetector)
     {
@@ -45,10 +55,8 @@ public partial class NetworkInterfacesViewModel : ObservableObject
         try
         {
             await _nicService.RefreshAsync();
-            var adapters = await _nicService.GetAllAdaptersAsync();
-            Adapters.Clear();
-            foreach (var adapter in adapters)
-                Adapters.Add(adapter);
+            _allAdapters = await _nicService.GetAllAdaptersAsync();
+            ApplyAdapterFilter();
 
             // DetectMode/GetGuestIp may spawn wsl.exe (5s cap) — keep it off the UI thread.
             var wslText = await Task.Run(() =>
@@ -66,5 +74,23 @@ public partial class NetworkInterfacesViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    partial void OnShowHiddenAdaptersChanged(bool value) => ApplyAdapterFilter();
+
+    private void ApplyAdapterFilter()
+    {
+        var visible = ShowHiddenAdapters
+            ? _allAdapters
+            : _allAdapters.Where(a => !a.IsHidden).ToList();
+
+        Adapters.Clear();
+        foreach (var adapter in visible)
+            Adapters.Add(adapter);
+
+        var hidden = _allAdapters.Count(a => a.IsHidden);
+        AdapterCountText = hidden > 0 && !ShowHiddenAdapters
+            ? $"{Adapters.Count} adapters  •  {hidden} hidden"
+            : $"{Adapters.Count} adapters";
     }
 }
