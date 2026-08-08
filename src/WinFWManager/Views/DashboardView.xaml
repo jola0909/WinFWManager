@@ -75,7 +75,7 @@
             <!-- Summary Cards -->
             <UniformGrid Grid.Row="0" Rows="1" Margin="0,0,0,12">
 
-                <!-- Total Connections -->
+                <!-- Total events (packets captured, not connections) -->
                 <Border Style="{StaticResource CardBorder}">
                     <Grid>
                         <Border Width="3" HorizontalAlignment="Left" CornerRadius="6,0,0,6"
@@ -83,7 +83,7 @@
                         <StackPanel Margin="18,13,16,13">
                             <TextBlock Text="TOTAL EVENTS" Style="{StaticResource CardLabel}"
                                        Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            <TextBlock Text="{Binding TotalConnections, StringFormat='{}{0:N0}'}"
+                            <TextBlock Text="{Binding TotalEvents, StringFormat='{}{0:N0}'}"
                                        Style="{StaticResource CardValue}"
                                        Foreground="{DynamicResource PrimaryTextBrush}"/>
                             <TextBlock Style="{StaticResource CardCaption}">
@@ -102,7 +102,7 @@
                         <StackPanel Margin="18,13,16,13">
                             <TextBlock Text="BLOCKED" Style="{StaticResource CardLabel}"
                                        Foreground="{DynamicResource DangerBrush}"/>
-                            <TextBlock Text="{Binding BlockedConnections, StringFormat='{}{0:N0}'}"
+                            <TextBlock Text="{Binding BlockedEvents, StringFormat='{}{0:N0}'}"
                                        Style="{StaticResource CardValue}"
                                        Foreground="{DynamicResource DangerBrush}"/>
                             <ProgressBar Value="{Binding BlockedPercent, Mode=OneWay}" Maximum="100"
@@ -123,7 +123,7 @@
                         <StackPanel Margin="18,13,16,13">
                             <TextBlock Text="ALLOWED" Style="{StaticResource CardLabel}"
                                        Foreground="{DynamicResource SuccessBrush}"/>
-                            <TextBlock Text="{Binding AllowedConnections, StringFormat='{}{0:N0}'}"
+                            <TextBlock Text="{Binding AllowedEvents, StringFormat='{}{0:N0}'}"
                                        Style="{StaticResource CardValue}"
                                        Foreground="{DynamicResource SuccessBrush}"/>
                             <ProgressBar Value="{Binding AllowedPercent, Mode=OneWay}" Maximum="100"
@@ -318,7 +318,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="86"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
                                                        ToolTip="{Binding Address}"
@@ -328,9 +328,17 @@
                                             <TextBlock Grid.Column="1" Text="{Binding Country}" Margin="8,0"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Count, StringFormat='{}{0:N0}'}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="12"/>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding FlowCount, StringFormat='{}{0:N0}'}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           FontWeight="Bold" FontSize="12"
+                                                           ToolTip="Distinct conversations with this peer"/>
+                                                <TextBlock Text="{Binding Count, StringFormat='{}({0:N0}p)'}"
+                                                           Margin="4,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"
+                                                           ToolTip="Captured packets"/>
+                                            </StackPanel>
                                         </Grid>
                                     </Grid>
                                 </DataTemplate>
@@ -354,7 +362,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="86"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
                                                        ToolTip="{Binding Address}"

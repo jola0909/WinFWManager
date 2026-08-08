@@ -32,10 +32,10 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
     private List<NetworkAdapterInfo> _adapters = new();
 
-    [ObservableProperty] private int _totalConnections;
-    [ObservableProperty] private int _blockedConnections;
+    [ObservableProperty] private int _totalEvents;
+    [ObservableProperty] private int _blockedEvents;
     [ObservableProperty] private double _blockedPercent;
-    [ObservableProperty] private int _allowedConnections;
+    [ObservableProperty] private int _allowedEvents;
     [ObservableProperty] private double _allowedPercent;
     [ObservableProperty] private int _inboundCount;
     [ObservableProperty] private int _outboundCount;
@@ -152,9 +152,9 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     {
         var sb = new StringBuilder();
         sb.AppendLine("WinFW Manager — traffic graph summary");
-        sb.AppendLine($"Total connections : {TotalConnections:N0}");
-        sb.AppendLine($"Allowed           : {AllowedConnections:N0} ({AllowedPercent:F1}%)");
-        sb.AppendLine($"Blocked           : {BlockedConnections:N0} ({BlockedPercent:F1}%)");
+        sb.AppendLine($"Total events      : {TotalEvents:N0}");
+        sb.AppendLine($"Allowed           : {AllowedEvents:N0} ({AllowedPercent:F1}%)");
+        sb.AppendLine($"Blocked           : {BlockedEvents:N0} ({BlockedPercent:F1}%)");
         sb.AppendLine($"Inbound/Outbound  : {InboundCount:N0} / {OutboundCount:N0}");
 
         if (HasDrill)
@@ -372,11 +372,11 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
             query = query.Where(e => TrafficGraphBuilder.MatchesDrill(e, Drill, _adapters));
         var events = query.ToList();
 
-        TotalConnections = events.Count;
-        BlockedConnections = events.Count(e => e.Action is TrafficAction.Block or TrafficAction.Drop);
-        AllowedConnections = events.Count(e => e.Action == TrafficAction.Allow);
-        BlockedPercent = TotalConnections > 0 ? (double)BlockedConnections / TotalConnections * 100 : 0;
-        AllowedPercent = TotalConnections > 0 ? (double)AllowedConnections / TotalConnections * 100 : 0;
+        TotalEvents = events.Count;
+        BlockedEvents = events.Count(e => e.Action is TrafficAction.Block or TrafficAction.Drop);
+        AllowedEvents = events.Count(e => e.Action == TrafficAction.Allow);
+        BlockedPercent = TotalEvents > 0 ? (double)BlockedEvents / TotalEvents * 100 : 0;
+        AllowedPercent = TotalEvents > 0 ? (double)AllowedEvents / TotalEvents * 100 : 0;
         InboundCount = events.Count(e => e.Direction == TrafficDirection.Inbound);
         OutboundCount = events.Count(e => e.Direction == TrafficDirection.Outbound);
 
@@ -415,22 +415,31 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         GraphData = graph;
     }
 
-    /// <summary>Groups events by remote peer into the top 5 entries, with
-    /// each entry's share of the leader for the inline bars.</summary>
+    /// <summary>
+    /// Groups events by remote peer into the top 5 entries, with each entry's share of
+    /// the leader for the inline bars.
+    ///
+    /// Ranked by distinct conversations rather than packets: capture is per packet, so
+    /// one busy stream would otherwise bury every other peer. A single QUIC download was
+    /// observed filling 9329 of the 10000-entry buffer from one flow. Packet counts are
+    /// still carried, as the volume signal.
+    /// </summary>
     private void FillTopTalkers(ObservableCollection<TopTalkerEntry> target,
         IEnumerable<TrafficEvent> events)
     {
         var entries = events
             .GroupBy(e => e.RemoteAddress!.ToString())
-            .OrderByDescending(g => g.Count())
-            .Take(5)
             .Select(g => new TopTalkerEntry
             {
                 Address = g.Key,
+                FlowCount = g.Select(e => e.FlowKey).Distinct().Count(),
                 Count = g.Count(),
                 Country = g.First().Country ?? "Unknown",
                 Hostname = HostnameFor(g.Key)
             })
+            .OrderByDescending(t => t.FlowCount)
+            .ThenByDescending(t => t.Count)
+            .Take(5)
             .ToList();
 
         // Resolve names for whatever actually ranked. The monitor resolves peers it
@@ -443,9 +452,10 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
                 _ = ResolveHostnameAsync(e.Address);
         }
 
-        int max = entries.Count > 0 ? entries[0].Count : 0;
+        // Share bar tracks the ranking metric, so the bars match the order.
+        int max = entries.Count > 0 ? entries[0].FlowCount : 0;
         foreach (var e in entries)
-            e.SharePercent = max > 0 ? (double)e.Count / max * 100 : 0;
+            e.SharePercent = max > 0 ? (double)e.FlowCount / max * 100 : 0;
 
         target.Clear();
         foreach (var e in entries)
@@ -477,6 +487,11 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 public class TopTalkerEntry
 {
     public string Address { get; set; } = string.Empty;
+
+    /// <summary>Distinct conversations with this peer — what the ranking uses.</summary>
+    public int FlowCount { get; set; }
+
+    /// <summary>Captured packets, which is volume rather than conversation count.</summary>
     public int Count { get; set; }
     public string Country { get; set; } = "Unknown";
 

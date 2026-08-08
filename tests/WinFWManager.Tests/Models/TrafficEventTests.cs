@@ -170,6 +170,66 @@ public class TrafficEventTests
     }
 
     [Fact]
+    public void RemotePort_Outbound_IsDestination_Inbound_IsSource()
+    {
+        var outbound = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound, SourcePort = 58451, DestinationPort = 443,
+        };
+        outbound.RemotePort.Should().Be(443);
+        outbound.LocalPort.Should().Be(58451);
+
+        var inbound = new TrafficEvent
+        {
+            Direction = TrafficDirection.Inbound, SourcePort = 443, DestinationPort = 58451,
+        };
+        inbound.RemotePort.Should().Be(443);
+        inbound.LocalPort.Should().Be(58451);
+    }
+
+    [Fact]
+    public void FlowKey_BothDirectionsOfOneConversation_Match()
+    {
+        // Packets travelling each way must collapse to one flow, otherwise a single
+        // stream counts as two conversations.
+        var sent = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound, Protocol = TransportProtocol.UDP,
+            SourcePort = 58451, DestinationPort = 443,
+        };
+        var received = new TrafficEvent
+        {
+            Direction = TrafficDirection.Inbound, Protocol = TransportProtocol.UDP,
+            SourcePort = 443, DestinationPort = 58451,
+        };
+
+        sent.FlowKey.Should().Be(received.FlowKey);
+    }
+
+    [Fact]
+    public void FlowKey_DifferentLocalPortOrProtocol_AreDifferentFlows()
+    {
+        var a = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound, Protocol = TransportProtocol.TCP,
+            SourcePort = 1000, DestinationPort = 443,
+        };
+        var differentSocket = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound, Protocol = TransportProtocol.TCP,
+            SourcePort = 1001, DestinationPort = 443,
+        };
+        var differentProtocol = new TrafficEvent
+        {
+            Direction = TrafficDirection.Outbound, Protocol = TransportProtocol.UDP,
+            SourcePort = 1000, DestinationPort = 443,
+        };
+
+        a.FlowKey.Should().NotBe(differentSocket.FlowKey);
+        a.FlowKey.Should().NotBe(differentProtocol.FlowKey);
+    }
+
+    [Fact]
     public void RemoteAddress_MissingEndpoint_IsNull()
     {
         new TrafficEvent { Direction = TrafficDirection.Outbound }.RemoteAddress.Should().BeNull();

@@ -149,9 +149,9 @@ public sealed class WinFwTools
             stats = DashboardStats(),
             graph = GraphSummary(),
             topTalkers = _dashboard.TopTalkers
-                .Select(t => new { t.Address, t.Hostname, t.Country, t.Count }).ToList(),
+                .Select(t => new { t.Address, t.Hostname, t.Country, t.FlowCount, t.Count }).ToList(),
             topBlocked = _dashboard.TopBlocked
-                .Select(t => new { t.Address, t.Hostname, t.Country, t.Count }).ToList()
+                .Select(t => new { t.Address, t.Hostname, t.Country, t.FlowCount, t.Count }).ToList()
         }));
 
     [McpServerTool(Name = "get_rules")]
@@ -288,9 +288,9 @@ public sealed class WinFwTools
 
     private object DashboardStats() => new
     {
-        total = _dashboard.TotalConnections,
-        allowed = _dashboard.AllowedConnections,
-        blocked = _dashboard.BlockedConnections,
+        total = _dashboard.TotalEvents,
+        allowed = _dashboard.AllowedEvents,
+        blocked = _dashboard.BlockedEvents,
         blockedPercent = Math.Round(_dashboard.BlockedPercent, 1),
         inbound = _dashboard.InboundCount,
         outbound = _dashboard.OutboundCount

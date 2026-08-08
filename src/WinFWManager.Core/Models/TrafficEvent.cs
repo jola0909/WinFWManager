@@ -69,6 +69,22 @@ public class TrafficEvent : INotifyPropertyChanged
     public IPAddress? LocalAddress
         => Direction == TrafficDirection.Outbound ? SourceAddress : DestinationAddress;
 
+    /// <summary>The peer's port — the service port for outbound traffic.</summary>
+    public int RemotePort
+        => Direction == TrafficDirection.Outbound ? DestinationPort : SourcePort;
+
+    /// <summary>This machine's port, which identifies the local socket.</summary>
+    public int LocalPort
+        => Direction == TrafficDirection.Outbound ? SourcePort : DestinationPort;
+
+    /// <summary>
+    /// Identifies the conversation this packet belongs to. Events are captured per
+    /// packet, so counting them measures volume, not how many separate conversations a
+    /// peer is involved in — a single busy stream can produce thousands.
+    /// </summary>
+    public (TransportProtocol Protocol, int LocalPort, int RemotePort) FlowKey
+        => (Protocol, LocalPort, RemotePort);
+
     /// <summary>Compact flow path, e.g. "WSL guest → vEthernet (WSL) ⛔".</summary>
     public string FlowDescription
     {
