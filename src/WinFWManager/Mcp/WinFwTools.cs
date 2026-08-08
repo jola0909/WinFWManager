@@ -70,7 +70,8 @@ public sealed class WinFwTools
                     totalEvents = _traffic.Events.Count,
                     visibleEvents = VisibleTrafficEvents().Count,
                     monitoring = _main.IsMonitoring,
-                    rows = VisibleTrafficEvents().Take(take).Select(Describe).ToList()
+                    // The grid auto-scrolls, so the newest rows are the on-screen ones.
+                    rows = VisibleTrafficEvents().TakeLast(take).Select(Describe).ToList()
                 },
                 "Network Interfaces" => new
                 {
@@ -108,8 +109,9 @@ public sealed class WinFwTools
         => Ui.RunAsync(() => Json(AdapterSnapshot(includeHidden)));
 
     [McpServerTool(Name = "get_traffic_events")]
-    [Description("Captured traffic events. By default returns only events passing the " +
-                 "filters currently applied in the Traffic Monitor tab, newest first.")]
+    [Description("Captured traffic events — the most recent ones, in display order. " +
+                 "By default returns only events passing the filters currently applied " +
+                 "in the Traffic Monitor tab.")]
     public Task<string> GetTrafficEventsAsync(
         [Description("Maximum events to return (default 50, max 500).")] int limit = 50,
         [Description("False to ignore the UI filters and return the raw buffer.")] bool applyUiFilter = true)
@@ -130,7 +132,9 @@ public sealed class WinFwTools
                 totalInBuffer = _traffic.Events.Count,
                 matched = source.Count,
                 returned = Math.Min(take, source.Count),
-                events = source.Take(take).Select(Describe).ToList()
+                // Newest, not oldest: the grid auto-scrolls, so these are the rows the
+                // user is actually looking at. Kept in display order within the slice.
+                events = source.TakeLast(take).Select(Describe).ToList()
             });
         });
     }

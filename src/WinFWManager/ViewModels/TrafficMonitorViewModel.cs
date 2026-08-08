@@ -23,6 +23,17 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     private readonly Dispatcher _dispatcher;
     private bool _nicCacheLoaded;
 
+    // Reverse-DNS results keyed by peer address. A completed lookup that found nothing
+    // is stored as null, so a name that does not resolve is not retried on every batch.
+    private readonly Dictionary<string, string?> _hostnameByIp = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _hostnameLookupsInFlight = new(StringComparer.Ordinal);
+
+    // DNS is slow relative to capture, so lookups are throttled and capped. Traffic can
+    // touch thousands of distinct peers; resolving every one would achieve nothing but
+    // load. Names already known are applied instantly from the cache.
+    private readonly SemaphoreSlim _dnsThrottle = new(4, 4);
+    private const int MaxTrackedHostnames = 2_000;
+
     public ObservableCollection<TrafficEvent> Events { get; } = new();
     public ICollectionView EventsView { get; }
 
@@ -84,8 +95,7 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
 
             var localAddress = evt.Direction == TrafficDirection.Outbound
                 ? evt.SourceAddress : evt.DestinationAddress;
-            var remoteAddress = evt.Direction == TrafficDirection.Outbound
-                ? evt.DestinationAddress : evt.SourceAddress;
+            var remoteAddress = PeerAddress(evt);
 
             // Geo-locate the peer, not the destination: on an inbound event the
             // destination is this machine, which reported "Private" for every
@@ -123,6 +133,17 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
             {
                 evt.InterfaceName = adapter.Name;
                 evt.AdapterType = adapter.AdapterType;
+            }
+
+            // Apply a known name immediately; otherwise queue a lookup that back-fills
+            // this row and every other one sharing the peer once it completes.
+            if (remoteAddress != null && !RouteLookup.IsWildcard(remoteAddress))
+            {
+                var key = remoteAddress.ToString();
+                if (_hostnameByIp.TryGetValue(key, out var known))
+                    evt.Hostname = known;
+                else
+                    _ = ResolveHostnameAsync(remoteAddress, key);
             }
 
             _eventBuffer.Add(evt);
@@ -308,6 +329,60 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
 
         var dialog = new Views.RuleEditorDialog(rule);
         dialog.ShowDialog();
+    }
+
+    /// <summary>The far end of the connection: the destination when we sent it,
+    /// the source when we received it.</summary>
+    private static System.Net.IPAddress? PeerAddress(TrafficEvent evt)
+        => evt.Direction == TrafficDirection.Outbound
+            ? evt.DestinationAddress : evt.SourceAddress;
+
+    /// <summary>
+    /// Looks up a peer's reverse-DNS name off the UI thread, then back-fills every
+    /// buffered event sharing that peer. Best-effort: a failed lookup caches "no name"
+    /// so it is not retried on every batch. Safe to call repeatedly — peers already
+    /// known or in flight are skipped.
+    /// </summary>
+    private async Task ResolveHostnameAsync(System.Net.IPAddress address, string key)
+    {
+        // Guards run before the first await, so on the UI thread — which is what keeps
+        // both collections single-threaded and lock-free.
+        if (_hostnameByIp.Count >= MaxTrackedHostnames) return;
+        if (!_hostnameLookupsInFlight.Add(key)) return;
+
+        string? name = null;
+        try
+        {
+            await _dnsThrottle.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                name = await _geoIpResolver.ReverseDnsAsync(address).ConfigureAwait(false);
+            }
+            finally
+            {
+                _dnsThrottle.Release();
+            }
+        }
+        catch
+        {
+            // Reverse DNS is best-effort; cached as "no name" below.
+        }
+
+        await _dispatcher.InvokeAsync(() =>
+        {
+            _hostnameLookupsInFlight.Remove(key);
+            _hostnameByIp[key] = name;
+
+            if (name == null) return;
+
+            // Rows are already on screen, so this relies on TrafficEvent.Hostname
+            // raising a change notification.
+            foreach (var e in Events)
+            {
+                if (PeerAddress(e)?.ToString() == key)
+                    e.Hostname = name;
+            }
+        });
     }
 
     public void Dispose()

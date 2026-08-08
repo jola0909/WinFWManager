@@ -1,8 +1,9 @@
+using System.ComponentModel;
 using System.Net;
 
 namespace WinFWManager.Core.Models;
 
-public class TrafficEvent
+public class TrafficEvent : INotifyPropertyChanged
 {
     public DateTime Timestamp { get; set; }
     public TrafficDirection Direction { get; set; }
@@ -21,7 +22,27 @@ public class TrafficEvent
     public string? Country { get; set; }
     public string? City { get; set; }
     public string? Asn { get; set; }
-    public string? Hostname { get; set; }
+    /// <summary>
+    /// Reverse-DNS name of the remote peer. Unlike the other fields this is filled in
+    /// after the event is already on screen — the lookup runs in the background — so it
+    /// raises a change notification to refresh the bound row.
+    /// </summary>
+    public string? Hostname
+    {
+        get => _hostname;
+        set
+        {
+            if (_hostname == value) return;
+            _hostname = value;
+            PropertyChanged?.Invoke(this, HostnameChanged);
+        }
+    }
+
+    private string? _hostname;
+    private static readonly PropertyChangedEventArgs HostnameChanged = new(nameof(Hostname));
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public long FilterId { get; set; }
 
     /// <summary>Human-readable drop reason; null for allowed traffic.</summary>

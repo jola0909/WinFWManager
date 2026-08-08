@@ -144,4 +144,46 @@ public class TrafficEventTests
         };
         evt.FlowDescription.Should().Be("LAN → Ethernet ✓");
     }
+
+    [Fact]
+    public void Hostname_WhenSet_RaisesPropertyChanged()
+    {
+        // Reverse DNS completes after the row is already displayed, so the back-fill
+        // only reaches the UI if this notification fires.
+        var evt = new TrafficEvent();
+        var raised = new List<string?>();
+        evt.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        evt.Hostname = "example.com";
+
+        evt.Hostname.Should().Be("example.com");
+        raised.Should().ContainSingle().Which.Should().Be(nameof(TrafficEvent.Hostname));
+    }
+
+    [Fact]
+    public void Hostname_SetToSameValue_DoesNotRaise()
+    {
+        // Every buffered event sharing a peer is rewritten when a lookup lands, so
+        // unchanged writes must stay silent rather than churn the bound rows.
+        var evt = new TrafficEvent { Hostname = "example.com" };
+        var raised = 0;
+        evt.PropertyChanged += (_, _) => raised++;
+
+        evt.Hostname = "example.com";
+
+        raised.Should().Be(0);
+    }
+
+    [Fact]
+    public void Hostname_ClearedToNull_RaisesPropertyChanged()
+    {
+        var evt = new TrafficEvent { Hostname = "example.com" };
+        var raised = 0;
+        evt.PropertyChanged += (_, _) => raised++;
+
+        evt.Hostname = null;
+
+        evt.Hostname.Should().BeNull();
+        raised.Should().Be(1);
+    }
 }
