@@ -99,6 +99,19 @@ The exe will be in `src/WinFWManager/bin/Release/net10.0-windows/win-x64/publish
 - **Windows 10/11** (or Windows Server 2016+)
 - **Run as Administrator** — required for ETW traffic capture and firewall rule management
 
+### GeoIP database (optional)
+
+Country lookup needs MaxMind's free **GeoLite2 City** database, which is ~61 MB and cannot be
+redistributed under MaxMind's licence — so it is **not** in this repo and not in the released
+binaries. Without it the app runs normally and the Country column reads `Unknown` for every
+public address.
+
+To enable it, [sign up for a free MaxMind account](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data),
+download **GeoLite2-City.mmdb**, and either:
+
+- drop it next to `WinFWManager.exe`, or
+- place it at `src/WinFWManager/GeoLite2-City.mmdb` before building — the build copies it to the output automatically
+
 ## Architecture
 
 ```

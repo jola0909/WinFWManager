@@ -82,9 +82,17 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
                 evt.ProcessName = processInfo.DisplayName;
             }
 
-            if (evt.DestinationAddress != null)
+            var localAddress = evt.Direction == TrafficDirection.Outbound
+                ? evt.SourceAddress : evt.DestinationAddress;
+            var remoteAddress = evt.Direction == TrafficDirection.Outbound
+                ? evt.DestinationAddress : evt.SourceAddress;
+
+            // Geo-locate the peer, not the destination: on an inbound event the
+            // destination is this machine, which reported "Private" for every
+            // connection arriving from the internet.
+            if (remoteAddress != null)
             {
-                var geoInfo = _geoIpResolver.Resolve(evt.DestinationAddress);
+                var geoInfo = _geoIpResolver.Resolve(remoteAddress);
                 evt.Country = geoInfo.DisplayCountry;
             }
 
@@ -99,11 +107,17 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
             }
             else
             {
-                var local = evt.Direction == TrafficDirection.Outbound
-                    ? evt.SourceAddress : evt.DestinationAddress;
-                var remote = evt.Direction == TrafficDirection.Outbound
-                    ? evt.DestinationAddress : evt.SourceAddress;
-                adapter = _nicService.ResolveAdapter(local, remote);
+                adapter = _nicService.ResolveAdapter(localAddress, remoteAddress);
+
+                // Sockets bound to the wildcard address (0.0.0.0 / ::) carry no usable
+                // local IP — common for outbound QUIC — so nothing above can match.
+                // Ask Windows which interface it would actually route the peer over.
+                if (adapter == null && RouteLookup.IsWildcard(localAddress) && remoteAddress != null)
+                {
+                    var routedIndex = RouteLookup.GetBestInterfaceIndex(remoteAddress);
+                    if (routedIndex is int idx)
+                        adapter = _nicService.ResolveByIfIndex(idx);
+                }
             }
             if (adapter != null)
             {

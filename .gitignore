@@ -212,6 +212,10 @@ PublishScripts/
 NuGet.config
 nuget.config
 
+# MaxMind GeoLite2 database (~61 MB). Not redistributable under MaxMind's licence,
+# and far too large for the repo — download your own copy, see README.md.
+*.mmdb
+
 # NuGet Packages
 *.nupkg
 # NuGet Symbol Packages

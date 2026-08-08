@@ -8,6 +8,16 @@
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
 
+  <!--
+    GeoIP city database. Copied to the output only when present: it is ~61 MB and
+    MaxMind's GeoLite2 licence does not permit redistributing it, so it is gitignored
+    rather than committed. Without it the app still runs and every country reads
+    "Unknown" — see the GeoIP section in README.md for how to obtain a copy.
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)GeoLite2-City.mmdb')">
+    <None Include="GeoLite2-City.mmdb" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Hosts the local MCP endpoint inside the WPF process so tools can read live UI state. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
