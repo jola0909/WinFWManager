@@ -377,13 +377,23 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(HasFilters));
 
+        // Multicast this machine sends is looped back and captured as inbound, so its
+        // own adapter addresses turn up as "peers". Genuine traffic, but it is not
+        // someone we are talking to — exclude it so the ranking stays about the network.
+        var localIps = _adapters
+            .SelectMany(a => a.IpAddresses)
+            .Select(ip => ip.ToString())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        bool IsPeer(TrafficEvent e)
+            => e.RemoteAddress != null && !localIps.Contains(e.RemoteAddress.ToString());
+
         // Top talkers by remote peer
-        FillTopTalkers(TopTalkers, events
-            .Where(e => e.RemoteAddress != null));
+        FillTopTalkers(TopTalkers, events.Where(IsPeer));
 
         // Top blocked peers
         FillTopTalkers(TopBlocked, events
-            .Where(e => e.Action is TrafficAction.Block or TrafficAction.Drop && e.RemoteAddress != null));
+            .Where(e => e.Action is TrafficAction.Block or TrafficAction.Drop && IsPeer(e)));
 
         var graph = TrafficGraphBuilder.Build(events, _adapters, _expandedGroups);
         ApplyHostnames(graph);
