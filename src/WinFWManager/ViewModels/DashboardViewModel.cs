@@ -51,6 +51,13 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _filterNic = string.Empty;
     [ObservableProperty] private string _filterAction = string.Empty;
 
+    /// <summary>
+    /// When false (the default) mDNS/LLMNR/SSDP group destinations are left out of the
+    /// top-talker rankings. They are real traffic, but they are destinations rather than
+    /// peers and otherwise crowd out actual endpoints.
+    /// </summary>
+    [ObservableProperty] private bool _showMulticastGroups;
+
     [ObservableProperty] private DrillSelection? _drill;
     [ObservableProperty] private string _drillLabel = string.Empty;
     [ObservableProperty] private bool _hasDrill;
@@ -101,6 +108,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     partial void OnFilterProcessChanged(string value) { _filter.Process = value; RefreshStats(); }
     partial void OnFilterNicChanged(string value) { _filter.Nic = value; RefreshStats(); }
     partial void OnFilterActionChanged(string value) { _filter.Action = value; RefreshStats(); }
+    partial void OnShowMulticastGroupsChanged(bool value) => RefreshStats();
 
     partial void OnDrillChanged(DrillSelection? value)
     {
@@ -380,19 +388,20 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         // Multicast this machine sends is looped back and captured as inbound, so its
         // own adapter addresses turn up as "peers". Genuine traffic, but it is not
         // someone we are talking to — exclude it so the ranking stays about the network.
-        // Compare on the address alone: an adapter reports its link-local with a scope
-        // suffix ("fe80::1%3") while captured events carry it without, so matching the
-        // rendered strings silently misses every IPv6 link-local.
-        static string AddressKey(System.Net.IPAddress ip)
-            => new System.Net.IPAddress(ip.GetAddressBytes()).ToString();
-
+        // Keyed without the IPv6 scope: an adapter reports its link-local as
+        // "fe80::1%3" while captured events carry it without, so comparing the rendered
+        // strings silently misses every IPv6 link-local.
         var localIps = _adapters
             .SelectMany(a => a.IpAddresses)
-            .Select(AddressKey)
+            .Select(IpAddressUtils.ScopelessKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         bool IsPeer(TrafficEvent e)
-            => e.RemoteAddress != null && !localIps.Contains(AddressKey(e.RemoteAddress));
+        {
+            if (e.RemoteAddress == null) return false;
+            if (localIps.Contains(IpAddressUtils.ScopelessKey(e.RemoteAddress))) return false;
+            return ShowMulticastGroups || !IpAddressUtils.IsMulticastOrBroadcast(e.RemoteAddress);
+        }
 
         // Top talkers by remote peer
         FillTopTalkers(TopTalkers, events.Where(IsPeer));
@@ -423,6 +432,16 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
                 Hostname = HostnameFor(g.Key)
             })
             .ToList();
+
+        // Resolve names for whatever actually ranked. The monitor resolves peers it
+        // sees, but the dashboard keeps its own cache, so without this the list shows
+        // bare addresses for hosts whose names are already known elsewhere. Each
+        // completed lookup calls RefreshStats, which repopulates these entries.
+        foreach (var e in entries)
+        {
+            if (!HostnameResolved(e.Address))
+                _ = ResolveHostnameAsync(e.Address);
+        }
 
         int max = entries.Count > 0 ? entries[0].Count : 0;
         foreach (var e in entries)

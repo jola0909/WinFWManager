@@ -300,7 +300,13 @@
 
                 <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="16,14,16,14">
                     <StackPanel>
-                        <TextBlock Text="Top Destinations" Style="{StaticResource PanelTitle}" Margin="0,0,0,10"/>
+                        <DockPanel Margin="0,0,0,10">
+                            <CheckBox DockPanel.Dock="Right" Content="Multicast"
+                                      IsChecked="{Binding ShowMulticastGroups}"
+                                      VerticalAlignment="Center" FontSize="11"
+                                      ToolTip="Include mDNS/LLMNR/SSDP group destinations in both rankings. They are real traffic, but destinations rather than peers."/>
+                            <TextBlock Text="Top Talkers" Style="{StaticResource PanelTitle}"/>
+                        </DockPanel>
                         <ItemsControl ItemsSource="{Binding TopTalkers}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
