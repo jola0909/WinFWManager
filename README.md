@@ -22,7 +22,9 @@ A modern Windows Firewall management application built with WPF and .NET 10. Mon
 > **WSL traffic visibility.** WSL→host traffic — both allowed **and** firewall-dropped — is captured via the `Microsoft-Windows-TCPIP` manifest provider, with exact adapter attribution and human-readable drop reasons. The remaining limitation is unchanged: in NAT mode, WSL2 guest→internet traffic is NAT-forwarded by WinNAT and never becomes a host socket, so capturing it would require adapter-level capture (`pktmon`/NDIS), which is out of scope for the ETW-based design. WinFW Manager is aware of the WSL networking mode: **NAT** is fully supported; **Mirrored** is detected and an explanatory banner is shown (WSL traffic is indistinguishable from host traffic by design); **Bridged** is handled best-effort via guest IP tagging.
 
 ### Dashboard
-- At-a-glance stats: active connections, bandwidth, top talkers
+- At-a-glance stats: captured events, allow/block split, direction, top talkers
+  (counts are **packet events**, not connections — a single busy stream can produce
+  thousands in a second)
 - **Interactive network traffic graph** showing traffic flow between local NICs and remote endpoints
 - Hover tooltips with detailed connection info (byte counts, allowed/blocked, top ports, country)
 - **WSL-guest nodes highlighted yellow**; fully-blocked flows drawn as dashed red edges, with drop reasons listed in the edge tooltip

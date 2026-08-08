@@ -81,7 +81,7 @@
                         <Border Width="3" HorizontalAlignment="Left" CornerRadius="6,0,0,6"
                                 Background="{DynamicResource AccentBrush}"/>
                         <StackPanel Margin="18,13,16,13">
-                            <TextBlock Text="TOTAL CONNECTIONS" Style="{StaticResource CardLabel}"
+                            <TextBlock Text="TOTAL EVENTS" Style="{StaticResource CardLabel}"
                                        Foreground="{DynamicResource SecondaryTextBrush}"/>
                             <TextBlock Text="{Binding TotalConnections, StringFormat='{}{0:N0}'}"
                                        Style="{StaticResource CardValue}"
