@@ -148,6 +148,9 @@ public sealed class WinFwTools
             filters = DashboardFilters(),
             stats = DashboardStats(),
             graph = GraphSummary(),
+            // Rankings are sorted by this; "Conversations" ranks by distinct flows,
+            // "Packets" by captured volume.
+            ranking = _dashboard.Ranking.ToString(),
             topTalkers = _dashboard.TopTalkers
                 .Select(t => new { t.Address, t.Hostname, t.Country, t.FlowCount, t.Count }).ToList(),
             topBlocked = _dashboard.TopBlocked

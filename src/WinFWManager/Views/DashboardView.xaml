@@ -301,6 +301,12 @@
                 <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="16,14,16,14">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,10">
+                            <ComboBox DockPanel.Dock="Right"
+                                      ItemsSource="{Binding RankingOptions}"
+                                      SelectedItem="{Binding Ranking}"
+                                      VerticalAlignment="Center" FontSize="11"
+                                      MinWidth="112" Margin="8,0,0,0"
+                                      ToolTip="Rank by conversations to see who this machine deals with most, or by packets to see what is moving the most traffic."/>
                             <CheckBox DockPanel.Dock="Right" Content="Multicast"
                                       IsChecked="{Binding ShowMulticastGroups}"
                                       VerticalAlignment="Center" FontSize="11"
@@ -330,14 +336,14 @@
                                                        Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal"
                                                         HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding FlowCount, StringFormat='{}{0:N0}'}"
+                                                <TextBlock Text="{Binding PrimaryValue, StringFormat='{}{0:N0}'}"
                                                            Foreground="{DynamicResource AccentBrush}"
                                                            FontWeight="Bold" FontSize="12"
-                                                           ToolTip="Distinct conversations with this peer"/>
-                                                <TextBlock Text="{Binding Count, StringFormat='{}({0:N0}p)'}"
+                                                           ToolTip="{Binding PrimaryTooltip}"/>
+                                                <TextBlock Text="{Binding SecondaryText}"
                                                            Margin="4,0,0,0" VerticalAlignment="Center"
                                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"
-                                                           ToolTip="Captured packets"/>
+                                                           ToolTip="c = conversations, p = packets"/>
                                             </StackPanel>
                                         </Grid>
                                     </Grid>

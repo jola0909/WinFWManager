@@ -58,6 +58,17 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty] private bool _showMulticastGroups;
 
+    /// <summary>
+    /// What the top-talker lists sort by. The two answer different questions: packets
+    /// finds whatever is moving the most traffic, conversations finds who this machine
+    /// deals with most. A single download wins the first and barely registers in the
+    /// second, so neither is right for every purpose.
+    /// </summary>
+    [ObservableProperty] private TopTalkerRanking _ranking = TopTalkerRanking.Conversations;
+
+    public IReadOnlyList<TopTalkerRanking> RankingOptions { get; } =
+        Enum.GetValues<TopTalkerRanking>();
+
     [ObservableProperty] private DrillSelection? _drill;
     [ObservableProperty] private string _drillLabel = string.Empty;
     [ObservableProperty] private bool _hasDrill;
@@ -109,6 +120,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     partial void OnFilterNicChanged(string value) { _filter.Nic = value; RefreshStats(); }
     partial void OnFilterActionChanged(string value) { _filter.Action = value; RefreshStats(); }
     partial void OnShowMulticastGroupsChanged(bool value) => RefreshStats();
+    partial void OnRankingChanged(TopTalkerRanking value) => RefreshStats();
 
     partial void OnDrillChanged(DrillSelection? value)
     {
@@ -419,15 +431,17 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     /// Groups events by remote peer into the top 5 entries, with each entry's share of
     /// the leader for the inline bars.
     ///
-    /// Ranked by distinct conversations rather than packets: capture is per packet, so
-    /// one busy stream would otherwise bury every other peer. A single QUIC download was
-    /// observed filling 9329 of the 10000-entry buffer from one flow. Packet counts are
-    /// still carried, as the volume signal.
+    /// Sorted by whichever metric <see cref="Ranking"/> selects; both are always
+    /// carried, since capture is per packet and the two answer different questions.
+    /// A single QUIC download was observed filling 9329 of the 10000 buffer entries
+    /// from one flow — top by packets, near-invisible by conversations.
     /// </summary>
     private void FillTopTalkers(ObservableCollection<TopTalkerEntry> target,
         IEnumerable<TrafficEvent> events)
     {
-        var entries = events
+        var byPackets = Ranking == TopTalkerRanking.Packets;
+
+        var all = events
             .GroupBy(e => e.RemoteAddress!.ToString())
             .Select(g => new TopTalkerEntry
             {
@@ -436,11 +450,24 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
                 Count = g.Count(),
                 Country = g.First().Country ?? "Unknown",
                 Hostname = HostnameFor(g.Key)
-            })
-            .OrderByDescending(t => t.FlowCount)
-            .ThenByDescending(t => t.Count)
+            });
+
+        var entries = (byPackets
+                ? all.OrderByDescending(t => t.Count).ThenByDescending(t => t.FlowCount)
+                : all.OrderByDescending(t => t.FlowCount).ThenByDescending(t => t.Count))
             .Take(5)
             .ToList();
+
+        // The row leads with whatever is being sorted on, so the numbers always read in
+        // descending order, with the other metric alongside for context.
+        foreach (var e in entries)
+        {
+            e.PrimaryValue = byPackets ? e.Count : e.FlowCount;
+            e.SecondaryText = byPackets ? $"({e.FlowCount:N0}c)" : $"({e.Count:N0}p)";
+            e.PrimaryTooltip = byPackets
+                ? "Captured packets"
+                : "Distinct conversations with this peer";
+        }
 
         // Resolve names for whatever actually ranked. The monitor resolves peers it
         // sees, but the dashboard keeps its own cache, so without this the list shows
@@ -453,9 +480,9 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         }
 
         // Share bar tracks the ranking metric, so the bars match the order.
-        int max = entries.Count > 0 ? entries[0].FlowCount : 0;
+        int max = entries.Count > 0 ? entries[0].PrimaryValue : 0;
         foreach (var e in entries)
-            e.SharePercent = max > 0 ? (double)e.FlowCount / max * 100 : 0;
+            e.SharePercent = max > 0 ? (double)e.PrimaryValue / max * 100 : 0;
 
         target.Clear();
         foreach (var e in entries)
@@ -484,15 +511,33 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     }
 }
 
+/// <summary>What the top-talker lists sort by.</summary>
+public enum TopTalkerRanking
+{
+    /// <summary>Distinct conversations — who this machine deals with most.</summary>
+    Conversations,
+
+    /// <summary>Captured packets — what is moving the most traffic.</summary>
+    Packets,
+}
+
 public class TopTalkerEntry
 {
     public string Address { get; set; } = string.Empty;
 
-    /// <summary>Distinct conversations with this peer — what the ranking uses.</summary>
+    /// <summary>Distinct conversations with this peer.</summary>
     public int FlowCount { get; set; }
 
     /// <summary>Captured packets, which is volume rather than conversation count.</summary>
     public int Count { get; set; }
+
+    /// <summary>The metric currently being ranked on, shown as the row's headline number.</summary>
+    public int PrimaryValue { get; set; }
+
+    /// <summary>The other metric, shown smaller beside it — "(1,234p)" or "(12c)".</summary>
+    public string SecondaryText { get; set; } = string.Empty;
+
+    public string PrimaryTooltip { get; set; } = string.Empty;
     public string Country { get; set; } = "Unknown";
 
     /// <summary>Reverse-DNS name when it has been resolved, else null.</summary>
