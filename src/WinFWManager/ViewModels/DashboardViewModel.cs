@@ -380,13 +380,19 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         // Multicast this machine sends is looped back and captured as inbound, so its
         // own adapter addresses turn up as "peers". Genuine traffic, but it is not
         // someone we are talking to — exclude it so the ranking stays about the network.
+        // Compare on the address alone: an adapter reports its link-local with a scope
+        // suffix ("fe80::1%3") while captured events carry it without, so matching the
+        // rendered strings silently misses every IPv6 link-local.
+        static string AddressKey(System.Net.IPAddress ip)
+            => new System.Net.IPAddress(ip.GetAddressBytes()).ToString();
+
         var localIps = _adapters
             .SelectMany(a => a.IpAddresses)
-            .Select(ip => ip.ToString())
+            .Select(AddressKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         bool IsPeer(TrafficEvent e)
-            => e.RemoteAddress != null && !localIps.Contains(e.RemoteAddress.ToString());
+            => e.RemoteAddress != null && !localIps.Contains(AddressKey(e.RemoteAddress));
 
         // Top talkers by remote peer
         FillTopTalkers(TopTalkers, events.Where(IsPeer));
