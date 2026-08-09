@@ -64,6 +64,13 @@
 
             <DataGrid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Why was this blocked?"
+                              Command="{Binding PlacementTarget.DataContext.ExplainBlockCommand,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItem,
+                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              ToolTip="Match this packet against your firewall rules to find the likely cause"/>
+                    <Separator/>
                     <MenuItem Header="Copy Selected Rows"
                               Command="ApplicationCommands.Copy"
                               CommandTarget="{Binding PlacementTarget,

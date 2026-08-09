@@ -187,6 +187,51 @@ public sealed class WinFwTools
         });
     }
 
+    [McpServerTool(Name = "explain_blocks")]
+    [Description("For recent dropped events, works out which firewall rule most likely " +
+                 "caused each drop by matching the packet against the configured rules. " +
+                 "Best-effort: the authoritative filter id is not available without " +
+                 "Security auditing enabled, so each result carries a 'conclusive' flag.")]
+    public Task<string> ExplainBlocksAsync(
+        [Description("How many recent dropped events to explain (default 10, max 50).")] int limit = 10)
+    {
+        var take = Math.Clamp(limit, 1, 50);
+
+        return Ui.RunAsync(() =>
+        {
+            var rules = _rules.Rules.ToList();
+            if (rules.Count == 0)
+                return Json(new { error = "No rules loaded — open the Rules Manager tab first." });
+
+            var drops = _traffic.Events
+                .Where(e => e.Action is TrafficAction.Block or TrafficAction.Drop)
+                .TakeLast(take)
+                .ToList();
+
+            return Json(new
+            {
+                rulesCompared = rules.Count,
+                dropsExamined = drops.Count,
+                results = drops.Select(e =>
+                {
+                    var r = FirewallRuleMatcher.Explain(e, rules);
+                    return new
+                    {
+                        time = e.Timestamp.ToString("HH:mm:ss.fff"),
+                        packet = $"{e.Protocol} {e.SourceAddress}:{e.SourcePort} -> " +
+                                 $"{e.DestinationAddress}:{e.DestinationPort}",
+                        direction = e.Direction.ToString(),
+                        process = e.ProcessName,
+                        stackReason = e.DropReason,
+                        r.Summary,
+                        conclusive = r.IsConclusive,
+                        blockingRules = r.BlockingRules.Take(3).Select(x => x.DisplayName).ToList(),
+                    };
+                }).ToList()
+            });
+        });
+    }
+
     // ------------------------------------------------------------ ui control
 
     [McpServerTool(Name = "set_traffic_filter")]

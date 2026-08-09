@@ -19,6 +19,11 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     private readonly IProcessResolver _processResolver;
     private readonly IGeoIpResolver _geoIpResolver;
     private readonly INetworkInterfaceService _nicService;
+    private readonly IFirewallRuleService _ruleService;
+
+    // Rules are only needed when someone asks why a packet was dropped, so they are
+    // fetched on first use rather than on every startup.
+    private IReadOnlyList<FirewallRuleInfo>? _rulesForAttribution;
     private readonly RingBuffer<TrafficEvent> _eventBuffer = new(50_000);
     private readonly TrafficEventFilter _filter = new();
     private IDisposable? _subscription;
@@ -56,12 +61,14 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
         IProcessResolver processResolver,
         IGeoIpResolver geoIpResolver,
         INetworkInterfaceService nicService,
+        IFirewallRuleService ruleService,
         WslNetworkModeDetector wslDetector)
     {
         _etwMonitor = etwMonitor;
         _processResolver = processResolver;
         _geoIpResolver = geoIpResolver;
         _nicService = nicService;
+        _ruleService = ruleService;
         _dispatcher = Dispatcher.CurrentDispatcher;
         ShowMirroredBanner = wslDetector.DetectMode() == WslNetworkingMode.Mirrored;
 
@@ -331,6 +338,59 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
 
         var dialog = new Views.RuleEditorDialog(rule);
         dialog.ShowDialog();
+    }
+
+    /// <summary>
+    /// Explains why an event was dropped, by matching it against the configured rules.
+    /// Best-effort: the authoritative answer is the WFP filter that ran, whose id is not
+    /// available without enabling Security auditing, so results are phrased as likely.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExplainBlockAsync(TrafficEvent? evt)
+    {
+        if (evt == null) return;
+
+        try
+        {
+            _rulesForAttribution ??= await _ruleService.GetRulesAsync(FirewallStore.ActiveStore);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Could not load firewall rules to compare against.\n\n{ex.Message}",
+                "Why was this blocked?", System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        var result = FirewallRuleMatcher.Explain(evt, _rulesForAttribution);
+
+        var text = new StringBuilder();
+        text.AppendLine(result.Summary);
+        text.AppendLine();
+        text.AppendLine($"Packet:  {evt.Protocol} {evt.SourceAddress}:{evt.SourcePort} → " +
+                        $"{evt.DestinationAddress}:{evt.DestinationPort}");
+        text.AppendLine($"Process: {(string.IsNullOrEmpty(evt.ProcessName) ? "(none — kernel drop)" : evt.ProcessName)}");
+        if (!string.IsNullOrEmpty(evt.DropReason))
+            text.AppendLine($"Stack reason: {evt.DropReason}");
+
+        if (result.BlockingRules.Count > 0)
+        {
+            text.AppendLine();
+            text.AppendLine("Matching block rules, most specific first:");
+            foreach (var r in result.BlockingRules.Take(5))
+                text.AppendLine($"  • {r.DisplayName}{(string.IsNullOrEmpty(r.Group) ? "" : $"   [{r.Group}]")}");
+        }
+
+        if (!result.IsConclusive)
+        {
+            text.AppendLine();
+            text.AppendLine("This is a best-effort match against your rules, not the filter Windows " +
+                            "actually applied, so treat it as a lead rather than a verdict.");
+        }
+
+        System.Windows.MessageBox.Show(text.ToString(), "Why was this blocked?",
+            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     /// <summary>
