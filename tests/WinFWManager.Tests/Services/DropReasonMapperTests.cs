@@ -32,4 +32,29 @@ public class DropReasonMapperTests
     [Fact]
     public void UnknownTransportReason_FallsBackWithLayerTag()
         => DropReasonMapper.Transport(9999).Should().Be("Transport drop (reason 9999)");
+
+    [Theory]
+    [InlineData("Firewall (WFP filter)")]
+    [InlineData("Administratively prohibited")]
+    [InlineData("Inspection drop (WFP)")]
+    [InlineData("Inspection absorb (WFP)")]
+    [InlineData("Receive inspection failure (WFP)")]
+    public void IsPolicyDrop_FilteringPlatformDecisions_AreTrue(string reason)
+    {
+        DropReasonMapper.IsPolicyDrop(reason).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Duplicate segment")]
+    [InlineData("Bad checksum")]
+    [InlineData("No route")]
+    [InlineData("Endpoint not found (no listener)")]
+    [InlineData("Connection closing (FIN_WAIT_2)")]
+    [InlineData(null)]
+    public void IsPolicyDrop_StackDiscards_AreFalse(string? reason)
+    {
+        // A duplicate segment or bad checksum has no rule behind it, so offering to
+        // find one would be misleading.
+        DropReasonMapper.IsPolicyDrop(reason).Should().BeFalse();
+    }
 }

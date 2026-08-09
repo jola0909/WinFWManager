@@ -89,4 +89,26 @@ public static class DropReasonMapper
     /// <summary>The label that identifies a firewall (WFP) block; the drop
     /// correlator prefers this over other labels when merging layers.</summary>
     public const string FirewallLabel = "Firewall (WFP filter)";
+
+    /// <summary>
+    /// Reasons that mean a filter decided to drop the packet, as opposed to the network
+    /// stack discarding it for protocol reasons. Every one of these comes from the
+    /// Filtering Platform, which is what makes looking for a responsible rule sensible;
+    /// a duplicate TCP segment or a bad checksum has no rule behind it and never will.
+    /// </summary>
+    private static readonly HashSet<string> PolicyDropReasons = new(StringComparer.Ordinal)
+    {
+        FirewallLabel,
+        "Administratively prohibited",
+        "Inspection drop (WFP)",
+        "Inspection absorb (WFP)",
+        "Receive inspection failure (WFP)",
+    };
+
+    /// <summary>
+    /// True when a drop reason indicates a filtering decision, so it is worth asking
+    /// which rule caused it. False for stack-level discards, where no rule is involved.
+    /// </summary>
+    public static bool IsPolicyDrop(string? reason)
+        => reason != null && PolicyDropReasons.Contains(reason);
 }

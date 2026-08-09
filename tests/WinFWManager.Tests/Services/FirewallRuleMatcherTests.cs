@@ -49,6 +49,40 @@ public class FirewallRuleMatcherTests
         FirewallRuleMatcher.Explain(evt, []).Summary.Should().Contain("allowed");
     }
 
+    [Theory]
+    [InlineData("Duplicate segment")]
+    [InlineData("Bad checksum")]
+    [InlineData("Endpoint not found (no listener)")]
+    [InlineData("No route")]
+    public void Explain_StackLevelDrop_SaysNoRuleIsInvolved(string reason)
+    {
+        // These never involved a rule, so searching the rule set would produce
+        // confident-looking noise. Answer directly instead.
+        var evt = Drop();
+        evt.DropReason = reason;
+
+        var rules = new[] { Rule("Block everything") };
+        var result = FirewallRuleMatcher.Explain(evt, rules);
+
+        result.Summary.Should().Contain("network stack");
+        result.BlockingRules.Should().BeEmpty();
+        result.IsConclusive.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Firewall (WFP filter)")]
+    [InlineData("Inspection drop (WFP)")]
+    [InlineData("Administratively prohibited")]
+    public void Explain_PolicyDrop_StillConsultsTheRules(string reason)
+    {
+        var evt = Drop(destinationPort: 445);
+        evt.DropReason = reason;
+
+        var rules = new[] { Rule("Block SMB", localPort: "445") };
+
+        FirewallRuleMatcher.Explain(evt, rules).BlockingRules.Should().ContainSingle();
+    }
+
     [Fact]
     public void Explain_MatchingBlockRule_NamesIt()
     {

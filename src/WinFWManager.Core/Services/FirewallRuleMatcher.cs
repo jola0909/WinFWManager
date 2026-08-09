@@ -38,6 +38,17 @@ public static class FirewallRuleMatcher
         if (evt.Action == TrafficAction.Allow)
             return new RuleAttribution("This packet was allowed.", [], [], true);
 
+        // Most drops never involved a rule. Duplicate segments, bad checksums and
+        // missing listeners are the stack discarding a packet, and trawling the rule set
+        // for those produces confident-looking noise, so they are answered directly.
+        if (evt.DropReason != null && !DropReasonMapper.IsPolicyDrop(evt.DropReason))
+        {
+            return new RuleAttribution(
+                $"Dropped by the network stack ({evt.DropReason}), not by a firewall rule — " +
+                "no rule is involved in this kind of drop.",
+                [], [], IsConclusive: true);
+        }
+
         var candidates = rules.Where(r => Matches(r, evt)).ToList();
 
         var blocking = candidates
@@ -74,9 +85,12 @@ public static class FirewallRuleMatcher
                     [], [], IsConclusive: false);
         }
 
+        // The count of matching allow rules is deliberately not reported: permissive
+        // conditions mean dozens match a typical packet, which reads as insight but is
+        // not actionable.
         return new RuleAttribution(
-            $"No blocking rule matches, but {allowing.Count} allow rule(s) do. The drop likely came from " +
-            "a filter with no rule behind it, such as a Hyper-V or WFP dynamic filter.",
+            "A filter dropped this, but none of your blocking rules match it. The likely cause is a " +
+            "filter with no rule behind it, such as the Hyper-V firewall or a WFP dynamic filter.",
             [], allowing, IsConclusive: false);
     }
 
