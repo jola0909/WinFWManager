@@ -118,7 +118,7 @@ public sealed class CimFirewallQueryService : IDisposable
     {
         var rules = new List<(string, FirewallRuleInfo)>();
         foreach (var instance in _session.QueryInstances(CimNamespace, "WQL",
-            "SELECT InstanceID, ElementName, DisplayName, Description, Enabled, Direction, Action, Profiles, RuleGroup FROM MSFT_NetFirewallRule"))
+            "SELECT InstanceID, ElementName, DisplayName, Description, Enabled, Direction, Action, Profiles, RuleGroup, DisplayGroup FROM MSFT_NetFirewallRule"))
         {
             var id = GetStr(instance, "InstanceID");
             rules.Add((id, new FirewallRuleInfo
@@ -132,7 +132,13 @@ public sealed class CimFirewallQueryService : IDisposable
                 Action = GetUInt16(instance, "Action") == 2
                     ? TrafficAction.Allow : TrafficAction.Block,
                 Profile = ParseProfileFlags(GetUInt16(instance, "Profiles")),
-                Group = GetStr(instance, "RuleGroup"),
+                // RuleGroup holds an indirect string resource ("@FirewallAPI.dll,-32752")
+                // which the provider has already resolved into DisplayGroup ("Network
+                // Discovery"), so no string-table lookup of our own is needed. A minority
+                // of rules carry a plain RuleGroup and no DisplayGroup — keep theirs.
+                Group = GetStr(instance, "DisplayGroup") is { Length: > 0 } displayGroup
+                    ? displayGroup
+                    : GetStr(instance, "RuleGroup"),
             }));
         }
         return rules;

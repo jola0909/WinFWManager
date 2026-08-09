@@ -151,8 +151,12 @@ public partial class RulesManagerViewModel : ObservableObject
 
         if (!string.IsNullOrEmpty(SearchText))
         {
+            // Group is worth searching now that it resolves to a readable name:
+            // Windows organises rules into groups like "Network Discovery", so it is
+            // often the fastest way to pull a related set together.
             var match = rule.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                        (rule.Program?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false);
+                        (rule.Program?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (rule.Group?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false);
             if (!match) return false;
         }
 

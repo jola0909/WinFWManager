@@ -73,6 +73,7 @@
                 <DataGridTextColumn Header="Local Addr" Binding="{Binding LocalAddress}" Width="120"/>
                 <DataGridTextColumn Header="Remote Addr" Binding="{Binding RemoteAddress}" Width="120"/>
                 <DataGridTextColumn Header="Profile" Binding="{Binding Profile}" Width="70"/>
+                <DataGridTextColumn Header="Group" Binding="{Binding Group}" Width="150"/>
                 <DataGridTextColumn Header="Program" Binding="{Binding Program}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
