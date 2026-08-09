@@ -134,11 +134,12 @@ public sealed class CimFirewallQueryService : IDisposable
                 Profile = ParseProfileFlags(GetUInt16(instance, "Profiles")),
                 // RuleGroup holds an indirect string resource ("@FirewallAPI.dll,-32752")
                 // which the provider has already resolved into DisplayGroup ("Network
-                // Discovery"), so no string-table lookup of our own is needed. A minority
-                // of rules carry a plain RuleGroup and no DisplayGroup — keep theirs.
-                Group = GetStr(instance, "DisplayGroup") is { Length: > 0 } displayGroup
-                    ? displayGroup
-                    : GetStr(instance, "RuleGroup"),
+                // Discovery"). UWP package references survive that unresolved, so the
+                // package name is pulled out of them rather than showing a resource URI.
+                Group = RuleGroupLabel.Humanize(
+                    GetStr(instance, "DisplayGroup") is { Length: > 0 } displayGroup
+                        ? displayGroup
+                        : GetStr(instance, "RuleGroup")),
             }));
         }
         return rules;
