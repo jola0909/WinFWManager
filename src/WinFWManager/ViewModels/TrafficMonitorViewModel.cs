@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Reactive.Linq;
+using System.Text;
 using System.Windows.Data;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -329,6 +331,58 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
 
         var dialog = new Views.RuleEditorDialog(rule);
         dialog.ShowDialog();
+    }
+
+    /// <summary>
+    /// Writes the rows currently visible — filters applied — to a CSV file.
+    /// The capture buffer is memory-only and rolls over, so without this the evidence
+    /// behind an investigation is gone as soon as busy traffic evicts it.
+    /// </summary>
+    [RelayCommand]
+    private void ExportCsv()
+    {
+        var rows = ((System.Collections.IEnumerable)EventsView).Cast<TrafficEvent>().ToList();
+
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export traffic",
+            Filter = "CSV file (*.csv)|*.csv|All files (*.*)|*.*",
+            DefaultExt = ".csv",
+            FileName = $"winfw-traffic-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            // UTF-8 *with* BOM: adapter and process names carry non-ASCII characters
+            // (a Swedish install reports "Bluetooth-nätverksanslutning"), and Excel
+            // assumes the local codepage without one.
+            using var writer = new StreamWriter(dialog.FileName, false, new UTF8Encoding(true));
+
+            writer.WriteLine(Csv.Row(
+                "Time", "Direction", "Protocol", "Source IP", "Src Port", "Dest IP",
+                "Dst Port", "NIC", "NIC Exact", "Process", "PID", "Action", "Reason",
+                "Flow", "Profile", "Country", "Hostname"));
+
+            foreach (var e in rows)
+            {
+                writer.WriteLine(Csv.Row(
+                    e.Timestamp, e.Direction, e.Protocol,
+                    e.SourceAddress, e.SourcePort, e.DestinationAddress, e.DestinationPort,
+                    e.InterfaceName, e.IsInterfaceExact, e.ProcessName, e.ProcessId,
+                    e.Action, e.DropReason, e.FlowDescription, e.Profile,
+                    e.Country, e.Hostname));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Could not write the file.\n\n{ex.Message}",
+                "Export traffic", System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+        }
     }
 
     /// <summary>The far end of the connection: the destination when we sent it,

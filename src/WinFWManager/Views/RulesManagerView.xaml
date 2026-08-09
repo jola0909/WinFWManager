@@ -18,6 +18,8 @@
                 <Button Content="Delete" Command="{Binding DeleteRuleCommand}" Padding="12,4" Margin="0,0,4,0"/>
                 <Button Content="Enable/Disable" Command="{Binding ToggleEnabledCommand}" Padding="12,4" Margin="0,0,4,0"/>
                 <Button Content="Refresh" Command="{Binding RefreshRulesCommand}" Padding="12,4" Margin="0,0,4,0"/>
+                <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Padding="12,4" Margin="0,0,4,0"
+                        ToolTip="Save the rules currently visible, with search and profile filters applied."/>
             </StackPanel>
         </Border>
 

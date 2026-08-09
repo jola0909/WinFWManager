@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -126,6 +128,52 @@ public partial class RulesManagerViewModel : ObservableObject
         if (dialog.ShowDialog() == true)
         {
             _ = UpdateRuleAsync(dialog.Rule);
+        }
+    }
+
+    /// <summary>
+    /// Writes the rules currently visible — search and profile filters applied — to CSV,
+    /// which is the practical way to diff or document a machine's firewall config.
+    /// </summary>
+    [RelayCommand]
+    private void ExportCsv()
+    {
+        var rows = ((System.Collections.IEnumerable)RulesView).Cast<FirewallRuleInfo>().ToList();
+
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export rules",
+            Filter = "CSV file (*.csv)|*.csv|All files (*.*)|*.*",
+            DefaultExt = ".csv",
+            FileName = $"winfw-rules-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            // UTF-8 with BOM so non-ASCII rule and group names survive in Excel.
+            using var writer = new StreamWriter(dialog.FileName, false, new UTF8Encoding(true));
+
+            writer.WriteLine(Csv.Row(
+                "Name", "Enabled", "Direction", "Action", "Protocol", "Local Port",
+                "Remote Port", "Local Address", "Remote Address", "Profile", "Group",
+                "Program", "Hyper-V", "Description"));
+
+            foreach (var r in rows)
+            {
+                writer.WriteLine(Csv.Row(
+                    r.DisplayName, r.Enabled, r.Direction, r.Action, r.Protocol,
+                    r.LocalPort, r.RemotePort, r.LocalAddress, r.RemoteAddress,
+                    r.Profile, r.Group, r.Program, r.IsHyperVRule, r.Description));
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Could not write the file.\n\n{ex.Message}",
+                "Export rules", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
