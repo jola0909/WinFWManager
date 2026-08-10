@@ -232,6 +232,49 @@ public sealed class WinFwTools
         });
     }
 
+    [McpServerTool(Name = "get_audit_blocks")]
+    [Description("Blocked packets and connections as recorded by Windows Security " +
+                 "auditing (events 5152/5157). Unlike captured traffic these carry the " +
+                 "id of the WFP filter that made the decision. Returns the audit policy " +
+                 "state too; with auditing off there is nothing to read. Read-only — " +
+                 "this cannot change the audit policy, which is done from the app.")]
+    public Task<string> GetAuditBlocksAsync(
+        [Description("How many recent events to return (default 25, max 200).")] int limit = 25)
+    {
+        var take = Math.Clamp(limit, 1, 200);
+
+        // Reading the Security log is slow and touches no UI state, so it stays off the
+        // dispatcher unlike the other tools here.
+        return Task.Run(() =>
+        {
+            var state = WfpAuditPolicy.GetState();
+            var blocks = WfpAuditEventReader.ReadRecent(take);
+
+            return Json(new
+            {
+                auditPolicy = state.ToString(),
+                note = state == WfpAuditState.FailureAudit
+                    ? "Auditing is on; blocks are being recorded."
+                    : "Auditing is off or unreadable, so events may be absent or stale.",
+                returned = blocks.Count,
+                blocks = blocks.Select(b => new
+                {
+                    time = b.Time.ToString("yyyy-MM-dd HH:mm:ss"),
+                    b.EventId,
+                    b.FilterId,
+                    b.LayerId,
+                    b.LayerName,
+                    b.Application,
+                    b.Direction,
+                    b.Protocol,
+                    source = $"{b.SourceAddress}:{b.SourcePort}",
+                    destination = $"{b.DestAddress}:{b.DestPort}",
+                    b.ProcessId,
+                }).ToList()
+            });
+        });
+    }
+
     // ------------------------------------------------------------ ui control
 
     [McpServerTool(Name = "set_traffic_filter")]

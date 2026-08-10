@@ -23,6 +23,9 @@ public partial class TrafficMonitorView : UserControl
         }
     }
 
+    private void OnBlockAuditingClick(object sender, System.Windows.RoutedEventArgs e)
+        => new WfpAuditDialog { Owner = System.Windows.Window.GetWindow(this) }.ShowDialog();
+
     private void OnEventsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (DataContext is TrafficMonitorViewModel { IsAutoScroll: true } &&
