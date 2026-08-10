@@ -71,7 +71,7 @@ public class NetworkInterfaceService : INetworkInterfaceService, IDisposable
             }
 
             Guid.TryParse(ni.Id, out var interfaceGuid);
-            var adapterType = ClassifyAdapter(ni.Name);
+            var adapterType = ClassifyAdapter(ni.Name, ni.Description);
 
             var adapter = new NetworkAdapterInfo
             {
@@ -245,31 +245,50 @@ public class NetworkInterfaceService : INetworkInterfaceService, IDisposable
     }
 
     public AdapterType ClassifyAdapter(string interfaceName)
+        => ClassifyAdapter(interfaceName, null);
+
+    /// <summary>
+    /// Classifies an adapter from its connection name and driver description.
+    ///
+    /// Both are needed because only one of them is stable across languages. The
+    /// connection name is localized — a Swedish install reports
+    /// "Bluetooth-nätverksanslutning 2" — while the description comes from the driver and
+    /// stays English ("Hyper-V Virtual Ethernet Adapter"). Matching the name alone
+    /// silently degrades every virtual adapter to Physical on a non-English system.
+    /// </summary>
+    public AdapterType ClassifyAdapter(string? interfaceName, string? description)
     {
-        if (string.IsNullOrEmpty(interfaceName))
+        if (string.IsNullOrEmpty(interfaceName) && string.IsNullOrEmpty(description))
             return AdapterType.Unknown;
 
-        if (interfaceName.Contains("Loopback", StringComparison.OrdinalIgnoreCase))
+        if (Mentions("Loopback"))
             return AdapterType.Loopback;
 
-        if (interfaceName.Contains("WSL", StringComparison.OrdinalIgnoreCase))
+        // WSL before Hyper-V: the WSL adapter's description is the generic Hyper-V one,
+        // so checking Hyper-V first would swallow it.
+        if (Mentions("WSL"))
             return AdapterType.WSL;
 
-        if (interfaceName.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase))
+        if (StartsWithInName("vEthernet"))
             return AdapterType.VSwitch;
 
-        if (interfaceName.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase))
+        if (Mentions("Hyper-V"))
             return AdapterType.HyperV;
 
-        if (interfaceName.StartsWith("vSwitch", StringComparison.OrdinalIgnoreCase))
+        if (StartsWithInName("vSwitch"))
             return AdapterType.VSwitch;
 
-        if (interfaceName.Contains("Virtual", StringComparison.OrdinalIgnoreCase)
-            || interfaceName.Contains("VPN", StringComparison.OrdinalIgnoreCase)
-            || interfaceName.Contains("TAP", StringComparison.OrdinalIgnoreCase))
+        if (Mentions("Virtual") || Mentions("VPN") || Mentions("TAP"))
             return AdapterType.Virtual;
 
         return AdapterType.Physical;
+
+        bool Mentions(string token)
+            => interfaceName?.Contains(token, StringComparison.OrdinalIgnoreCase) == true
+            || description?.Contains(token, StringComparison.OrdinalIgnoreCase) == true;
+
+        bool StartsWithInName(string token)
+            => interfaceName?.StartsWith(token, StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static string? FormatMac(PhysicalAddress mac)

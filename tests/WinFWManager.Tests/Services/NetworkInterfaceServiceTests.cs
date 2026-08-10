@@ -103,6 +103,43 @@ public class NetworkInterfaceServiceTests
     }
 
     [Fact]
+    public void ClassifyAdapter_LocalizedName_UsesDriverDescription()
+    {
+        // The connection name is localized but the driver description is not, so
+        // classification must not depend on the name alone. Name-only matching would
+        // call all of these Physical on a non-English system.
+        var svc = new NetworkInterfaceService();
+
+        svc.ClassifyAdapter("Anslutning till lokalt nätverk* 9", "Hyper-V Virtual Ethernet Adapter")
+            .Should().Be(AdapterType.HyperV);
+
+        svc.ClassifyAdapter("Nätverksbrygga", "TAP-Windows Adapter V9")
+            .Should().Be(AdapterType.Virtual);
+
+        svc.ClassifyAdapter("Loopback-Pseudoschnittstelle 1", "Software Loopback Interface 1")
+            .Should().Be(AdapterType.Loopback);
+    }
+
+    [Fact]
+    public void ClassifyAdapter_WslWinsOverGenericHyperVDescription()
+    {
+        // The WSL adapter's description is the generic Hyper-V one, so checking Hyper-V
+        // first would misclassify it and break WSL traffic attribution.
+        var svc = new NetworkInterfaceService();
+
+        svc.ClassifyAdapter("vEthernet (WSL (Hyper-V firewall))", "Hyper-V Virtual Ethernet Adapter")
+            .Should().Be(AdapterType.WSL);
+    }
+
+    [Fact]
+    public void ClassifyAdapter_PhysicalNicWithLocalizedName_StaysPhysical()
+    {
+        new NetworkInterfaceService()
+            .ClassifyAdapter("Bluetooth-nätverksanslutning 2", "Bluetooth Device (Personal Area Network) #2")
+            .Should().Be(AdapterType.Physical);
+    }
+
+    [Fact]
     public async Task GetAllAdaptersAsync_ReturnsAtLeastOne()
     {
         var svc = new NetworkInterfaceService();
