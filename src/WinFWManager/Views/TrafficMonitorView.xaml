@@ -34,8 +34,21 @@
                     <Button Content="Clear Events" Command="{Binding ClearEventsCommand}" Margin="4,0,0,0"/>
                     <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Margin="4,0,0,0"
                             ToolTip="Save the rows currently visible, with filters applied. The capture buffer is memory-only and rolls over."/>
-                    <Button Content="Block auditing…" Click="OnBlockAuditingClick" Margin="4,0,0,0"
-                            ToolTip="Windows records which rule blocked a packet only when audit policy allows it. Off by default."/>
+                    <Button Content="{Binding AuditButtonText}" Click="OnBlockAuditingClick" Margin="4,0,0,0"
+                            ToolTip="Windows records which rule blocked a packet only when audit policy allows it. Off by default; amber means on.">
+                        <Button.Style>
+                            <!-- Amber while on: this writes to the Security log and stays on
+                                 after the app closes, so it should not blend in. -->
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAuditingBlocks}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
                 <TextBlock Text="Tip: prefix with ! to exclude (e.g. !svchost)  •  comma-separate multiple terms (e.g. !10.0.0.1,!192.168.1.1)"
                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,3,0,0" Opacity="0.6"/>

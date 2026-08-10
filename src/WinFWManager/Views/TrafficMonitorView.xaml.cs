@@ -11,6 +11,14 @@ public partial class TrafficMonitorView : UserControl
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<TrafficMonitorViewModel>();
+
+        // The audit policy is system-wide and can change outside this app, so the label
+        // is refreshed whenever the tab is shown rather than read once at startup.
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true && DataContext is TrafficMonitorViewModel vm)
+                vm.RefreshAuditState();
+        };
     }
 
     protected override void OnInitialized(EventArgs e)
@@ -24,7 +32,13 @@ public partial class TrafficMonitorView : UserControl
     }
 
     private void OnBlockAuditingClick(object sender, System.Windows.RoutedEventArgs e)
-        => new WfpAuditDialog { Owner = System.Windows.Window.GetWindow(this) }.ShowDialog();
+    {
+        new WfpAuditDialog { Owner = System.Windows.Window.GetWindow(this) }.ShowDialog();
+
+        // The dialog is where the policy is usually changed, so pick that up on close.
+        if (DataContext is TrafficMonitorViewModel vm)
+            vm.RefreshAuditState();
+    }
 
     private void OnEventsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

@@ -341,6 +341,34 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Label for the block-auditing button, showing state without needing a click.
+    /// Auditing is a system-wide setting that persists after the app closes, so leaving
+    /// it on unnoticed is the failure mode worth designing against.
+    /// </summary>
+    [ObservableProperty] private string _auditButtonText = "Block auditing…";
+
+    /// <summary>True while auditing is on, used to colour the button as a reminder.</summary>
+    [ObservableProperty] private bool _isAuditingBlocks;
+
+    /// <summary>
+    /// Re-reads the audit policy. Called when the tab becomes visible and after the
+    /// dialog closes, since the policy can also be changed outside this app.
+    /// </summary>
+    public void RefreshAuditState()
+    {
+        var state = WfpAuditPolicy.GetState();
+
+        IsAuditingBlocks = state == WfpAuditState.FailureAudit;
+        AuditButtonText = state switch
+        {
+            WfpAuditState.FailureAudit => "Block auditing: On",
+            WfpAuditState.Disabled => "Block auditing: Off",
+            // Never show "Off" for a policy that could not be read.
+            _ => "Block auditing: ?",
+        };
+    }
+
+    /// <summary>
     /// Explains why an event was dropped, by matching it against the configured rules.
     /// Best-effort: the authoritative answer is the WFP filter that ran, whose id is not
     /// available without enabling Security auditing, so results are phrased as likely.
