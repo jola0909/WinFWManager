@@ -78,7 +78,8 @@ public static class WfpFilterResolver
                     ? Marshal.PtrToStringUni(header.DisplayData.Name)
                     : null;
 
-                return string.IsNullOrWhiteSpace(name) ? null : name;
+                // Windows pads rule-derived filter names with a leading space.
+                return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
             }
             catch (DllNotFoundException)
             {

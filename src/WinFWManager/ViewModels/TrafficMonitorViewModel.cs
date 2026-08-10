@@ -363,10 +363,31 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // Prefer the authoritative answer. With auditing on, Windows records the filter
+        // that actually acted, which beats inferring one from the rule set.
+        var auditing = WfpAuditPolicy.GetState() == WfpAuditState.FailureAudit;
+        WfpAuditBlock? audit = null;
+        if (auditing)
+        {
+            var recent = await Task.Run(() => WfpAuditEventReader.ReadRecent(200));
+            audit = WfpAuditCorrelator.FindMatch(evt, recent);
+        }
+
+        var filterName = audit != null ? WfpFilterResolver.Resolve(audit.FilterId) : null;
         var result = FirewallRuleMatcher.Explain(evt, _rulesForAttribution);
 
         var text = new StringBuilder();
-        text.AppendLine(result.Summary);
+
+        if (filterName != null)
+        {
+            text.AppendLine($"Blocked by \"{filterName}\".");
+            text.AppendLine("Reported by Windows audit logging, so this is the filter that actually acted.");
+        }
+        else
+        {
+            text.AppendLine(result.Summary);
+        }
+
         text.AppendLine();
         text.AppendLine($"Packet:  {evt.Protocol} {evt.SourceAddress}:{evt.SourcePort} → " +
                         $"{evt.DestinationAddress}:{evt.DestinationPort}");
@@ -374,7 +395,7 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
         if (!string.IsNullOrEmpty(evt.DropReason))
             text.AppendLine($"Stack reason: {evt.DropReason}");
 
-        if (result.BlockingRules.Count > 0)
+        if (filterName == null && result.BlockingRules.Count > 0)
         {
             text.AppendLine();
             text.AppendLine("Matching block rules, most specific first:");
@@ -382,11 +403,19 @@ public partial class TrafficMonitorViewModel : ObservableObject, IDisposable
                 text.AppendLine($"  • {r.DisplayName}{(string.IsNullOrEmpty(r.Group) ? "" : $"   [{r.Group}]")}");
         }
 
-        if (!result.IsConclusive)
+        if (filterName == null && !result.IsConclusive)
         {
             text.AppendLine();
             text.AppendLine("This is a best-effort match against your rules, not the filter Windows " +
                             "actually applied, so treat it as a lead rather than a verdict.");
+
+            if (!auditing)
+            {
+                text.AppendLine();
+                text.AppendLine("For a definitive answer, turn on Block auditing (button in this tab's " +
+                                "toolbar). Windows then records which filter acted — at the cost of " +
+                                "writing a lot to the Security log.");
+            }
         }
 
         System.Windows.MessageBox.Show(text.ToString(), "Why was this blocked?",

@@ -47,6 +47,29 @@ A modern Windows Firewall management application built with WPF and .NET 10. Mon
   itself lists are shown, with a *Show hidden adapters* toggle to see the rest
 - Auto-refreshes on first visit
 
+### Why was this blocked?
+Right-click any dropped row to ask which rule caused it. There are two levels of answer,
+because Windows does not always make the responsible filter visible.
+
+**Without auditing (default).** Most drops are answered definitively anyway: a duplicate
+TCP segment or a bad checksum is the network stack discarding a packet, and no rule was
+ever involved. For genuine filter decisions, the packet is matched against your rules on
+direction, protocol, ports, addresses and program, and the likely rule is named. That
+match is a lead rather than a verdict — conditions like `LocalSubnet` cannot be evaluated
+offline, so results say so.
+
+**With auditing on.** Windows records which filter actually acted, and the app resolves it
+to that filter's name. This is authoritative, and it is also the only way to see
+**outbound rule blocks at all**: those are refused before a packet exists, so traffic
+capture never sees them. Turn it on from **Block auditing…** in the Traffic Monitor
+toolbar.
+
+> ⚠️ Block auditing changes a **system-wide Windows audit policy**, not an app setting. It
+> persists after the app closes, and a machine dropping traffic steadily can write
+> thousands of Security log entries an hour. Only failure auditing is ever enabled;
+> success auditing would record every permitted connection. Turn it on to investigate,
+> off afterwards.
+
 ### AI Connection (MCP)
 WinFW Manager can expose its **live UI state** to an MCP client, so you can ask an AI about
 what you are looking at instead of describing it or pasting screenshots.
@@ -66,6 +89,8 @@ Available tools:
 | `get_traffic_events` | Captured events, honouring the Traffic Monitor's filters |
 | `get_dashboard` | Stats, top talkers, and the traffic-graph topology |
 | `get_rules` | Firewall rules as loaded in Rules Manager |
+| `explain_blocks` | Which rule most likely caused each recent drop |
+| `get_audit_blocks` | Audited blocks with the filter that acted (needs Block auditing on) |
 | `set_traffic_filter` / `clear_traffic_filters` | Drive the Traffic Monitor's filters |
 | `select_tab` | Switch the active tab |
 
