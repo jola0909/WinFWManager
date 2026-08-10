@@ -47,6 +47,13 @@ A modern Windows Firewall management application built with WPF and .NET 10. Mon
   itself lists are shown, with a *Show hidden adapters* toggle to see the rest
 - Auto-refreshes on first visit
 
+### Audited Blocks
+A dedicated tab listing blocks recorded by Windows audit logging, each showing **which
+filter or rule** made the decision, with a free-text filter and CSV export.
+
+This is the only place **outbound rule blocks** appear at all: Windows refuses them
+before a packet exists, so traffic capture never sees them. Needs block auditing on.
+
 ### Why was this blocked?
 Right-click any dropped row to ask which rule caused it. There are two levels of answer,
 because Windows does not always make the responsible filter visible.

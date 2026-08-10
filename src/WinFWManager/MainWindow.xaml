@@ -62,6 +62,9 @@
             <TabItem Header="Traffic Monitor">
                 <views:TrafficMonitorView/>
             </TabItem>
+            <TabItem Header="Audited Blocks">
+                <views:AuditBlocksView/>
+            </TabItem>
             <TabItem Header="Log Viewer">
                 <views:LogViewerView/>
             </TabItem>

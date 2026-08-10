@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RulesManagerViewModel>();
         services.AddSingleton<NetworkInterfacesViewModel>();
         services.AddSingleton<DashboardViewModel>();
+        services.AddSingleton<AuditBlocksViewModel>();
 
         // Local MCP endpoint — constructed here but not started; the user starts it
         // explicitly from the AI Connect dialog.

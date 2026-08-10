@@ -17,9 +17,12 @@ namespace WinFWManager.Mcp;
 [McpServerToolType]
 public sealed class WinFwTools
 {
+    // Order must match the TabControl in MainWindow: SelectedTabIndex is an index, so a
+    // tab inserted there shifts every one after it.
     private static readonly string[] TabNames =
     {
-        "Traffic Monitor", "Log Viewer", "Rules Manager", "Network Interfaces", "Dashboard"
+        "Traffic Monitor", "Audited Blocks", "Log Viewer", "Rules Manager",
+        "Network Interfaces", "Dashboard"
     };
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
