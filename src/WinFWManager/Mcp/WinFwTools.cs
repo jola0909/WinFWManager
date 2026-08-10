@@ -262,11 +262,13 @@ public sealed class WinFwTools
                     time = b.Time.ToString("yyyy-MM-dd HH:mm:ss"),
                     b.EventId,
                     b.FilterId,
-                    b.LayerId,
-                    b.LayerName,
+                    // The whole point of auditing: the filter's name, which for filters
+                    // created from firewall rules is the rule's own name.
+                    filterName = WfpFilterResolver.Resolve(b.FilterId),
+                    layer = WfpAuditEventReader.Humanize(b.LayerName),
                     b.Application,
-                    b.Direction,
-                    b.Protocol,
+                    direction = WfpAuditEventReader.Humanize(b.Direction),
+                    protocol = WfpAuditEventReader.ProtocolName(b.Protocol),
                     source = $"{b.SourceAddress}:{b.SourcePort}",
                     destination = $"{b.DestAddress}:{b.DestPort}",
                     b.ProcessId,

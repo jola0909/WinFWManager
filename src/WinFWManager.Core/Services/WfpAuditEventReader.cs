@@ -117,6 +117,42 @@ public static class WfpAuditEventReader
         return values;
     }
 
+    /// <summary>
+    /// Security events store direction and layer as message-table references such as
+    /// "%%14593" rather than text, and the text they point at is localized. These are
+    /// mapped to stable English labels instead.
+    ///
+    /// The direction values were confirmed against live traffic: outbound TCP from a
+    /// blocked process reported %%14593, inbound multicast reported %%14592.
+    /// </summary>
+    public static string? Humanize(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || !value.StartsWith("%%", StringComparison.Ordinal))
+            return value;
+
+        return value switch
+        {
+            "%%14592" => "Inbound",
+            "%%14593" => "Outbound",
+            "%%14597" => "Transport layer",
+            "%%14608" => "IPsec layer",
+            "%%14610" => "ALE Receive/Accept",
+            "%%14611" => "ALE Connect",
+            _ => value,   // leave unknown codes visible rather than inventing a label
+        };
+    }
+
+    /// <summary>IANA protocol number to name; the event carries the number.</summary>
+    public static string? ProtocolName(string? number) => number switch
+    {
+        null or "" => null,
+        "1" => "ICMP",
+        "6" => "TCP",
+        "17" => "UDP",
+        "58" => "ICMPv6",
+        _ => number,
+    };
+
     private static string? Get(Dictionary<string, string> data, string name)
         => data.TryGetValue(name, out var value) && value.Length > 0 ? value : null;
 
