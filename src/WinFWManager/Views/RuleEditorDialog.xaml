@@ -43,6 +43,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -75,17 +77,25 @@
         <TextBlock Grid.Row="7" Text="Remote Port:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
         <TextBox Grid.Row="7" Grid.Column="1" x:Name="TxtRemotePort" Margin="0,0,0,6"/>
 
-        <TextBlock Grid.Row="8" Text="Program:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
-        <TextBox Grid.Row="8" Grid.Column="1" x:Name="TxtProgram" Margin="0,0,0,6"/>
+        <TextBlock Grid.Row="8" Text="Local Addr:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <TextBox Grid.Row="8" Grid.Column="1" x:Name="TxtLocalAddress" Margin="0,0,0,6"
+                 ToolTip="Blank means any. Accepts an address, a range, CIDR, or keywords such as LocalSubnet — comma-separate several."/>
 
-        <TextBlock Grid.Row="9" Text="Profile:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
-        <ComboBox Grid.Row="9" Grid.Column="1" x:Name="CmbProfile" ItemsSource="{Binding Source={StaticResource ProfileValues}}" Margin="0,0,0,6"/>
+        <TextBlock Grid.Row="9" Text="Remote Addr:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <TextBox Grid.Row="9" Grid.Column="1" x:Name="TxtRemoteAddress" Margin="0,0,0,6"
+                 ToolTip="Blank means any. Accepts an address, a range, CIDR, or keywords such as LocalSubnet — comma-separate several."/>
 
-        <TextBlock Grid.Row="10" Text="Enabled:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="10" Grid.Column="1" x:Name="ChkEnabled" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <TextBlock Grid.Row="10" Text="Program:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <TextBox Grid.Row="10" Grid.Column="1" x:Name="TxtProgram" Margin="0,0,0,6"/>
+
+        <TextBlock Grid.Row="11" Text="Profile:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <ComboBox Grid.Row="11" Grid.Column="1" x:Name="CmbProfile" ItemsSource="{Binding Source={StaticResource ProfileValues}}" Margin="0,0,0,6"/>
+
+        <TextBlock Grid.Row="12" Text="Enabled:" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="12" Grid.Column="1" x:Name="ChkEnabled" VerticalAlignment="Center" Margin="0,0,0,6"/>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="12" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="14" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK" Width="80" Padding="4" Margin="0,0,8,0" Click="OnOkClick"/>
             <Button Content="Cancel" Width="80" Padding="4" IsCancel="True"/>
         </StackPanel>
